@@ -9,6 +9,8 @@ from typing import Union
 # Densities can become very small very fast, so it is good to not capture the full range.
 vmax = 0.3
 
+scroll_sensitivity = 0.3
+
 def get_gaussian(x, mu, sigma) -> Union[float, np.array]:
     """
     Returns the value of a Gaussian funktion with mean mu and standard deviation sigma at value x.
@@ -90,10 +92,15 @@ class InteractiveGaussian(Gaussian):
         x = np.linspace(xlim[0], xlim[1], self.n_samples)
         self.features = phi(x)
 
-
         self.ax_weight = weight_space_ax
         self.ax_func = function_space_ax
 
+        self.bake_weight_density()
+
+        self.__plot_weight_distribution(initialize=True)
+        self.__plot_function_distribution(initialize=True)
+
+    def bake_weight_density(self):
         # Freeze an array of weight space densities for faster plotting.
         xlim = self.ax_weight.set_xlim()
         ylim = self.ax_weight.set_ylim()
@@ -107,12 +114,28 @@ class InteractiveGaussian(Gaussian):
                         self.sigma[self.active_idx[1], self.active_idx[1]])
         self.weight_density = multivariate_normal.pdf(pos, active_mu, active_sigma)
 
-        self.__plot_weight_distribution(initialize=True)
-        self.__plot_function_distribution(initialize=True)
+    def scale_sigma(self, scale: float) -> None:
+        """
+        Scales the sigma in all dimensions by scale and updates the weight space plot.
+        """
+        self.sigma *= scale
+        self.bake_weight_density()
+        self.plot(update_dist=True)
 
-    def __plot_weight_distribution(self, initialize=False) -> None:
+
+    def __plot_weight_distribution(self, initialize=False, update_dist=False) -> None:
         """
         Plot the weight distribution to self.ax_weight.
+        Can be run in three differently GPU heavy modes (The value of update_dist is only
+        important if initialize is False):
+
+        initialize == True:     Creates the plot object, must only be called once when initializing the
+                                InteractiveGaussian instance.
+
+        update_dist == True:    Update the axis data of the existing plot to a new weight distribution
+                                and set the axis extent to accomodate the current mu.
+
+        update_dist == False:   Updates only the extent of the existing plot to accomodate changes in mu.
         """
         xlim = self.ax_weight.set_xlim()
         ylim = self.ax_weight.set_ylim()
@@ -124,6 +147,9 @@ class InteractiveGaussian(Gaussian):
         if initialize:
             self.weight_plot = self.ax_weight.imshow(self.weight_density, cmap='Blues', aspect='auto', extent=extent)
             self.ax_weight.set_title('Weight space')
+        elif update_dist:
+            self.weight_plot.set_data(self.weight_density)
+            self.weight_plot.set_extent(extent)
         else:
             self.weight_plot.set_extent(extent)
 
@@ -157,11 +183,11 @@ class InteractiveGaussian(Gaussian):
         self.func_plot.figure.canvas.draw_idle()
 
 
-    def plot(self) -> None:
+    def plot(self, update_dist=False) -> None:
         """
         Plots the current weight and function space distributions to their assigned axes.
         """
-        self.__plot_weight_distribution()
+        self.__plot_weight_distribution(update_dist=update_dist)
         self.__plot_function_distribution()
 
     def on_mouse_move(self, event) -> None:
@@ -187,4 +213,12 @@ class InteractiveGaussian(Gaussian):
         """
         if event.button == MouseButton.LEFT:
             self.dragging = False
-            
+    
+    def on_scroll_event(self, event) -> None:
+        """
+        Adjusts all entries in sigma when scrolled over the weight space plot.
+        """
+        if event.button == 'up':
+            self.scale_sigma(1 - scroll_sensitivity)
+        elif event.button == 'down':
+            self.scale_sigma(1 / (1 - scroll_sensitivity))

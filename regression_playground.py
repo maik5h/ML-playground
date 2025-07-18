@@ -48,14 +48,13 @@ def start_regression():
     fig.canvas.mpl_connect('button_press_event', model.on_mouse_button_down)
     fig.canvas.mpl_connect('motion_notify_event', model.on_mouse_move)
     fig.canvas.mpl_connect('button_release_event', model.on_mouse_button_up)
+    fig.canvas.mpl_connect('scroll_event', model.on_scroll_event)
 
     # Let the model plots its distributions
     model.plot()
 
     # Plot sampled datapoints on top of function space distribution.
     ax_func.plot(x, samples, 'k.', markersize=2, label='samples')
-
-    ax_weight.legend()
     ax_func.legend()
 
     plt.tight_layout()

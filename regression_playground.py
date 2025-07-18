@@ -1,6 +1,8 @@
 from gaussians import InteractiveGaussian
+from features import *
 import numpy as np
 import matplotlib.pyplot as plt
+
 
 def start_regression():
     """
@@ -26,9 +28,6 @@ def start_regression():
     sample_noise = np.random.normal(loc=0, scale=noise_amount, size=number_samples)
     samples = (offset + x * slope) + sample_noise
 
-    # Initial model.
-    model = InteractiveGaussian(np.array((0., 0.)), np.eye(2))
-
     # Set up plots for weight and function space.
     fig, (ax_weight, ax_func) = plt.subplots(nrows=1, ncols=2, dpi=200, figsize=(6, 3))
     ax_weight.set_xlim(xlim_weight)
@@ -40,7 +39,10 @@ def start_regression():
     ax_func.set_xlabel('$x$')
     ax_func.set_ylabel('$f_w(x)$')
 
-    model.set_axes(ax_weight, ax_func)
+    # Forward default features and axes to the model.
+    # features = FeatureVector([SineFeature(n_pi=2), PolynomialFeature(power=1)])
+    features = FeatureVector([PolynomialFeature(power=2), PolynomialFeature(power=0), PolynomialFeature(1)])
+    model = InteractiveGaussian(features, ax_weight, ax_func)
 
     # Connect matplotlib callbacks.
     fig.canvas.mpl_connect('button_press_event', model.on_mouse_button_down)
@@ -50,10 +52,8 @@ def start_regression():
     # Let the model plots its distributions
     model.plot()
 
-    # Plot sampled datapoints on top of function space distribution and ground truth weights
-    # on weight space distribution.
+    # Plot sampled datapoints on top of function space distribution.
     ax_func.plot(x, samples, 'k.', markersize=2, label='samples')
-    ax_weight.plot(offset, slope, 'k+', markersize=7, label='ground truth')
 
     ax_weight.legend()
     ax_func.legend()

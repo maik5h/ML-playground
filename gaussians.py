@@ -1,9 +1,13 @@
+from features import FeatureVector
 import numpy as np
 from matplotlib.backend_bases import MouseButton
 import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 from typing import Union
 
+
+# Densities can become very small very fast, so it is good to not capture the full range.
+vmax = 0.3
 
 def get_gaussian(x, mu, sigma) -> Union[float, np.array]:
     """
@@ -44,25 +48,49 @@ class InteractiveGaussian(Gaussian):
     """
     Extends the Gaussian class by methods to plot the distribution and update parameters based on matplotlib callbacks.
     """
-    def __init__(self, mu: np.array, sigma: np.array):
-        Gaussian.__init__(self, mu, sigma)
+    def __init__(self, phi: FeatureVector, weight_space_ax: plt.axis, function_space_ax: plt.axis):
+        """
+        Initializes the Gaussian with mu = 0 and sigma = unit matching the dimension of the input feature vector.
+        """
+        Gaussian.__init__(self, np.zeros(len(phi)), np.eye(len(phi)))
 
         # Is the user currently dragging the weight distribution?
         self.dragging = False
 
         # The two weight distributions to display on the weight space plot.
-        self.displayed_weights = [0, 1]
+        self.active_idx = [0, 1]
+
+        # Phi is a FeatureVector, features is phi evaluated at n_samples x-positions.
+        self.n_samples = 500
+        self.phi: FeatureVector = None
+        self.features: np.array = None
 
         # Matplotlib plots to 
         self.weight_plot = None
         self.func_plot = None
 
-    def set_axes(self, weight_space_ax: plt.axis, function_space_ax: plt.axis) -> None:
+        self.setup(phi, weight_space_ax, function_space_ax)
+
+    def setup(self, phi: FeatureVector, weight_space_ax: plt.axis, function_space_ax: plt.axis) -> None:
         """
+        Initializes feature samples from FeatureVector.
         Sets the two axes to which the weight space and function space distributions are plotted.
         Creates a weight density array, which is reused as long as sigma does not change. Initializes
         the plots.
+
+        phi(x):             A function that returns the feature vector of the model evaluated at position x,
+                            where x can be a numpy array.
+        weight_space_ax:    Matplotlib axis to draw the weight space distribution onto.
+        function_space_ax:  Matplotlib axis to draw the function space distribution onto.
         """
+        self.phi = phi
+
+        # Evaluate the feature vector at n_samples x positions in the range of the function space plot.    
+        xlim = function_space_ax.set_xlim()
+        x = np.linspace(xlim[0], xlim[1], self.n_samples)
+        self.features = phi(x)
+
+
         self.ax_weight = weight_space_ax
         self.ax_func = function_space_ax
 
@@ -74,18 +102,24 @@ class InteractiveGaussian(Gaussian):
             np.linspace(ylim[0], ylim[1], 50)
         )
         pos = np.dstack((self.x1, self.x2))
-        self.weight_density = multivariate_normal.pdf(pos, np.zeros_like(self.mu), self.sigma)
+        active_mu = (self.mu[self.active_idx[0]], self.mu[self.active_idx[1]])
+        active_sigma = (self.sigma[self.active_idx[0], self.active_idx[0]],
+                        self.sigma[self.active_idx[1], self.active_idx[1]])
+        self.weight_density = multivariate_normal.pdf(pos, active_mu, active_sigma)
 
-        self.__plot_gaussian(initialize=True)
+        self.__plot_weight_distribution(initialize=True)
         self.__plot_function_distribution(initialize=True)
 
-    def __plot_gaussian(self, initialize=False) -> None:
+    def __plot_weight_distribution(self, initialize=False) -> None:
         """
         Plot the weight distribution to self.ax_weight.
         """
         xlim = self.ax_weight.set_xlim()
         ylim = self.ax_weight.set_ylim()
-        extent = (xlim[0]+self.mu[0], xlim[1]+self.mu[0], ylim[0]+self.mu[1], ylim[1]+self.mu[1])
+        extent = (xlim[0]+self.mu[self.active_idx[0]],
+                  xlim[1]+self.mu[self.active_idx[0]],
+                  ylim[0]+self.mu[self.active_idx[1]],
+                  ylim[1]+self.mu[self.active_idx[1]])
     
         if initialize:
             self.weight_plot = self.ax_weight.imshow(self.weight_density, cmap='Blues', aspect='auto', extent=extent)
@@ -99,18 +133,14 @@ class InteractiveGaussian(Gaussian):
         """
         Calculate the function distribution from the weight distribution and plot it to self.ax_func.
         """
-        n_samples = 100
-
         xlim = self.ax_func.set_xlim()
         ylim = self.ax_func.set_ylim()
 
-        x = np.linspace(xlim[0], xlim[1], n_samples)
-        y = np.linspace(ylim[0], ylim[1], n_samples)
-
-        phi = np.stack((np.ones(x.size), x)).T
+        x = np.linspace(xlim[0], xlim[1], self.n_samples)
+        y = np.linspace(ylim[0], ylim[1], self.n_samples)
 
         # Project into function space.
-        function_dist = self.project(phi)
+        function_dist = self.project(self.features)
         mu = function_dist.mu
         sigma = function_dist.sigma.diagonal()
 
@@ -120,7 +150,7 @@ class InteractiveGaussian(Gaussian):
 
         if initialize:
             self.ax_func.set_title('Function space')
-            self.func_plot = self.ax_func.imshow(densities, cmap='Blues', aspect='auto', extent=(xlim[0], xlim[1], ylim[0], ylim[1]))
+            self.func_plot = self.ax_func.imshow(densities, cmap='Blues', aspect='auto', extent=(xlim[0], xlim[1], ylim[0], ylim[1]), vmax=vmax)
         else:
             self.func_plot.set_data(densities)
         
@@ -131,7 +161,7 @@ class InteractiveGaussian(Gaussian):
         """
         Plots the current weight and function space distributions to their assigned axes.
         """
-        self.__plot_gaussian()
+        self.__plot_weight_distribution()
         self.__plot_function_distribution()
 
     def on_mouse_move(self, event) -> None:
@@ -140,8 +170,8 @@ class InteractiveGaussian(Gaussian):
         inside the weight space plot.
         """
         if self.dragging and event.xdata is not None and event.inaxes == self.ax_weight:
-            self.mu[self.displayed_weights[0]] = event.xdata
-            self.mu[self.displayed_weights[1]] = event.ydata
+            self.mu[self.active_idx[0]] = event.xdata
+            self.mu[self.active_idx[1]] = event.ydata
             self.plot()
 
     def on_mouse_button_down(self, event) -> None:

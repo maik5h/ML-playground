@@ -1,0 +1,17 @@
+{
+    "visuals": {
+        "weight_space_samples":     100,
+        "function_space_samples":   300,
+        "weight_space_xlim":        [-4, 4],
+        "weight_space_ylim":        [-4, 4],
+        "function_space_xlim":      [-5, 5],
+        "function_space_ylim":      [-15, 15],
+        "colormap_vmax":            0.3
+    },
+    "controls": {
+        "mouse_wheel_sensitivity": 0.3
+    },
+    "learning": {
+        "number_target_samples": 100
+    }
+}

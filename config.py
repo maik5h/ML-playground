@@ -1,0 +1,50 @@
+import json
+from logging import warning
+
+class Config:
+    """
+    Class to store and access the configuration of the regression playground.
+    """
+    # ----- Visuals -----
+    # The number of samples per axis used to render the weight space distribution.
+    weight_space_samples: int = 100
+
+    # The number of samples per axis used to render the function space distribution.
+    function_space_samples: int = 300
+
+    # Limits of weight and function space plots.
+    weight_space_xlim: list[float] = [-4, 4]
+    weight_space_ylim: list[float] = [-4, 4]
+    function_space_xlim: list[float] = [-5, 5]
+    function_space_ylim: list[float] = [-15, 15]
+    
+    # The vmax value of both plots.
+    colormap_vmax: float = 0.3
+
+
+    # ----- Controls -----
+    # The sensitivity of the mouse wheel when editing the Gaussians covariance.
+    mouse_wheel_sensitivity: float = 0.3
+
+
+    # ----- learning -----
+    # The number of samples from the function to be approximated.
+    number_target_samples: int = 100
+
+def load_config(path='./config.json'):
+    """
+    Copies the configuration from the json file at path into the static attributes of the Config class.
+    """
+    try:
+        with open(path, 'r') as f:
+            cfg = json.load(f)
+
+    except FileNotFoundError:
+        warning('Config file not found, using default configuration.')
+        return
+
+    # The actual config values are separated into several sub-dictionaries for clearer structure.
+    for sub_cfg in cfg.values():
+        for key in sub_cfg:
+            setattr(Config, key, sub_cfg[key])
+

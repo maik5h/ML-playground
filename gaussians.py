@@ -5,18 +5,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
 from typing import Union, List, SupportsIndex
 from logging import warning
+from config import Config
 
-
-# Densities can become very small very fast, so it is good to not capture the full range.
-vmax = 0.3
-
-scroll_sensitivity = 0.3
-
-# The resolution of the weight and function space plots in pixel per axis.
-# As the weight distribution is wide and smooth most of the time, it does not require
-# a very high resolution.
-n_samples_weight    = 100
-n_samples_func      = 300
 
 def get_gaussian(x, mu, sigma) -> Union[float, np.array]:
     """
@@ -125,7 +115,7 @@ class InteractiveGaussian(Gaussian):
         # The two weight distributions to display on the weight space plot.
         self._active_idx = [0, 1]
 
-        # Phi is a FeatureVector, features is phi evaluated at n_samples_func x-positions.
+        # Phi is a FeatureVector, features is phi evaluated at Config.function_space_samples x-positions.
         self.phi: FeatureVector = None
         self._features: np.array = None
 
@@ -161,15 +151,15 @@ class InteractiveGaussian(Gaussian):
 
         # As imshow is used instead of contourf() or similar, the y-axis has to be mirrored by convention.
         self.x1, self.x2 = np.meshgrid(
-            np.linspace(xlim[0], xlim[1], n_samples_weight),
-            np.linspace(ylim[1], ylim[0], n_samples_weight)
+            np.linspace(xlim[0], xlim[1], Config.weight_space_samples),
+            np.linspace(ylim[1], ylim[0], Config.weight_space_samples)
         )
         self._weight_samples = np.dstack((self.x1, self.x2))
 
         xlim = self._ax_func.set_xlim()
         ylim = self._ax_func.set_ylim()
-        self._func_samples_x = np.linspace(xlim[0], xlim[1], n_samples_func)
-        self._func_samples_y = np.linspace(ylim[1], ylim[0], n_samples_func)
+        self._func_samples_x = np.linspace(xlim[0], xlim[1], Config.function_space_samples)
+        self._func_samples_y = np.linspace(ylim[1], ylim[0], Config.function_space_samples)
    
         self._update_features()
 
@@ -235,13 +225,12 @@ class InteractiveGaussian(Gaussian):
         active_mu, active_sigma = self.select_random_variables(self._active_idx)
         weight_density = multivariate_normal.pdf(self._weight_samples, active_mu, active_sigma)
 
-    
         if initialize:
             xlim = self._ax_weight.set_xlim()
             ylim = self._ax_weight.set_ylim()
             extent = (xlim[0], xlim[1], ylim[0], ylim[1])
 
-            self._weight_plot = self._ax_weight.imshow(weight_density, cmap='Blues', aspect='auto', extent=extent)
+            self._weight_plot = self._ax_weight.imshow(weight_density, cmap='Blues', aspect='auto', extent=extent, vmax=Config.colormap_vmax)
             self._ax_weight.set_title('Weight space')
         else:
             self._weight_plot.set_data(weight_density)
@@ -267,7 +256,7 @@ class InteractiveGaussian(Gaussian):
 
         if initialize:
             self._ax_func.set_title('Function space')
-            self._func_plot = self._ax_func.imshow(densities, cmap='Blues', aspect='auto', extent=(xlim[0], xlim[1], ylim[0], ylim[1]), vmax=vmax)
+            self._func_plot = self._ax_func.imshow(densities, cmap='Blues', aspect='auto', extent=(xlim[0], xlim[1], ylim[0], ylim[1]), vmax=Config.colormap_vmax)
         else:
             self._func_plot.set_data(densities)
         
@@ -309,6 +298,6 @@ class InteractiveGaussian(Gaussian):
         Adjusts all entries in sigma when scrolled over the weight space plot.
         """
         if event.button == 'up':
-            self.scale_sigma(1 - scroll_sensitivity)
+            self.scale_sigma(1 - Config.mouse_wheel_sensitivity)
         elif event.button == 'down':
-            self.scale_sigma(1 / (1 - scroll_sensitivity))
+            self.scale_sigma(1 / (1 - Config.mouse_wheel_sensitivity))

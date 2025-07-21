@@ -3,6 +3,7 @@ from features import *
 import numpy as np
 import matplotlib.pyplot as plt
 from feature_controls import FeatureVectorController
+from config import load_config, Config
 
 
 def start_regression():
@@ -12,15 +13,11 @@ def start_regression():
     InteractiveGaussian methods.
     """
 
-    number_samples = 100
-    xlim_weight = (-4, 4)
-    ylim_weight = (-4, 4)
-    xlim_func = (-5, 5)
-    ylim_func = (-15, 15)
+    load_config()
 
     plt.rcParams['font.size'] = 5
 
-    x = np.linspace(xlim_func[0], xlim_func[1], number_samples)
+    x = np.linspace(Config.function_space_xlim[0], Config.function_space_xlim[1], Config.number_target_samples)
 
     # Create a linear function with random offset and slope.
     offset = np.random.rand() * 5 - 2.5
@@ -28,7 +25,7 @@ def start_regression():
 
     # Create noise vector to be added to samples.
     noise_amount = 0.5
-    sample_noise = np.random.normal(loc=0, scale=noise_amount, size=number_samples)
+    sample_noise = np.random.normal(loc=0, scale=noise_amount, size=Config.number_target_samples)
     samples = (offset + x * slope) + sample_noise
 
     # Set up plots for weight and function space.
@@ -37,10 +34,10 @@ def start_regression():
     # - axis for weight space plot.
     # - axis for function space plot.
     fig, (ax_controls, ax_weight, ax_func) = plt.subplots(nrows=1, ncols=3, dpi=200, figsize=(6, 3), gridspec_kw={'width_ratios': [1, 2, 2]})
-    ax_weight.set_xlim(xlim_weight)
-    ax_weight.set_ylim(ylim_weight)
-    ax_func.set_xlim(xlim_func)
-    ax_func.set_ylim(ylim_func)
+    ax_weight.set_xlim(Config.weight_space_xlim)
+    ax_weight.set_ylim(Config.weight_space_ylim)
+    ax_func.set_xlim(Config.function_space_xlim)
+    ax_func.set_ylim(Config.function_space_ylim)
     ax_weight.set_xlabel('$w_1$')
     ax_weight.set_ylabel('$w_2$')
     ax_func.set_xlabel('$x$')

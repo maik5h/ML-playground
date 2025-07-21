@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib.backend_bases import MouseButton
 import matplotlib.pyplot as plt
 from scipy.stats import multivariate_normal
-from typing import Union
+from typing import Union, List, SupportsIndex
 from logging import warning
 
 
@@ -64,7 +64,26 @@ class Gaussian:
         self.mu = np.delete(self.mu, idx)
         self.sigma = np.delete(self.sigma, idx, axis=0)
         self.sigma = np.delete(self.sigma, idx, axis=1)
+    
+    def select_random_variables(self, indices: List[SupportsIndex]) -> List[np.array]:
+        """
+        Selects the random variables at the input indices and marginalizes out all other variables.
+        Returns the corresponding mean vector mu and covariance matrix sigma.
+        """
+        mu = self.mu
+        sigma = self.sigma
 
+        # Find the indices to remove.
+        rm_indices = [len(self.mu) - n - 1 for n in range(len(self.mu))]
+        for i in indices:
+            rm_indices.remove(indices[i])
+
+        for idx in rm_indices:
+            mu = np.delete(mu, idx)
+            sigma = np.delete(sigma, idx, axis=0)
+            sigma = np.delete(sigma, idx, axis=1)
+        
+        return mu, sigma
 
     # def condition(self, A: np.array, y: np.array):
     #     dec = linalg.cho_factor(self.sigma @ A.T @ (A @ self.sigma @ A.T))
@@ -100,8 +119,13 @@ class InteractiveGaussian(Gaussian):
         # The two weight distributions to display on the weight space plot.
         self._active_idx = [0, 1]
 
-        # Phi is a FeatureVector, features is phi evaluated at n_samples x-positions.
-        self._n_samples = 500
+        # The resolution of the weight and function space plots.
+        # As the weight distribution is wide and smooth most of the time, it does not require
+        # a very high resolution to look pleasing.
+        self._n_weight_samples  = 100
+        self._n_feature_samples = 300
+
+        # Phi is a FeatureVector, features is phi evaluated at _n_feature_samples x-positions.
         self.phi: FeatureVector = None
         self._features: np.array = None
 
@@ -130,36 +154,18 @@ class InteractiveGaussian(Gaussian):
    
         self._update_features()
 
-        self.bake_weight_density()
-
         self._plot_weight_distribution(initialize=True)
         self._plot_function_distribution(initialize=True)
 
-    # TODO i dont think "baking" is necessary at all, it should plot sufficiently fast in real time.
-    # It also seems bug prone and looks odd, as the pixel of th graph do not match the grid of the plot.
-    def bake_weight_density(self):
-        # Freeze an array of weight space densities for faster plotting.
-        xlim = self._ax_weight.set_xlim()
-        ylim = self._ax_weight.set_ylim()
-        self.x1, self.x2 = np.meshgrid(
-            np.linspace(xlim[0], xlim[1], 50),
-            np.linspace(ylim[0], ylim[1], 50)
-        )
-        pos = np.dstack((self.x1, self.x2))
-        active_mu = (self.mu[self._active_idx[0]], self.mu[self._active_idx[1]])
-        active_sigma = (self.sigma[self._active_idx[0], self._active_idx[0]],
-                        self.sigma[self._active_idx[1], self._active_idx[1]])
-        self.weight_density = multivariate_normal.pdf(pos, active_mu, active_sigma)
-
     def _update_features(self):
         """
-        Evaluates the feature vector self.phi at different x-positions. self._n_samples positions
+        Evaluates the feature vector self.phi at different x-positions. self._n_feature_samples positions
         are chosen from within the plotted function space interval. The evaluated values are
         stored in self._features.
         Call everytime self.phi changes.
         """
         xlim = self._ax_func.set_xlim()
-        x = np.linspace(xlim[0], xlim[1], self._n_samples)
+        x = np.linspace(xlim[0], xlim[1], self._n_feature_samples)
         self._features = self.phi(x)
 
     def add_feature(self, feature: Feature):
@@ -174,8 +180,7 @@ class InteractiveGaussian(Gaussian):
         self.phi.add_feature(feature)
         self._update_features()
 
-        self.bake_weight_density
-        self.plot(update_dist=True)
+        self.plot()
     
     def remove_feature(self, idx: int) -> None:
         # Remove dimension from parent Gaussian.
@@ -185,8 +190,7 @@ class InteractiveGaussian(Gaussian):
         self.phi.remove_feature(idx)
         self._update_features()
 
-        self.bake_weight_density
-        self.plot(update_dist=True)
+        self.plot()
 
     def update_feature_parameter(self) -> None:
         """
@@ -201,40 +205,40 @@ class InteractiveGaussian(Gaussian):
         Scales the sigma in all dimensions by scale and updates the weight space plot.
         """
         self.sigma *= scale
-        self.bake_weight_density()
-        self.plot(update_dist=True)
+        self.plot()
 
-
-    def _plot_weight_distribution(self, initialize=False, update_dist=False) -> None:
+    def _plot_weight_distribution(self, initialize=False) -> None:
         """
         Plot the weight distribution to self._ax_weight.
-        Can be run in three differently GPU heavy modes (The value of update_dist is only
-        important if initialize is False):
 
         initialize == True:     Creates the plot object, must only be called once when initializing the
                                 InteractiveGaussian instance.
 
-        update_dist == True:    Updates the axis data of the existing plot to a new weight distribution
-                                and set the axis extent to accomodate the current mu.
-
-        update_dist == False:   Updates only the extent of the existing plot to accomodate changes in mu.
+        initialize == False:    Updates only the data of the existing plot.
         """
         xlim = self._ax_weight.set_xlim()
         ylim = self._ax_weight.set_ylim()
 
-        extent = (xlim[0]+self.mu[self._active_idx[0]],
-                  xlim[1]+self.mu[self._active_idx[0]],
-                  ylim[0]+self.mu[self._active_idx[1]],
-                  ylim[1]+self.mu[self._active_idx[1]])
+        # As i use imshow and not plotting as contourf() or similar, the y-axis has to be mirrored by convention.
+        self.x1, self.x2 = np.meshgrid(
+            np.linspace(xlim[0], xlim[1], self._n_weight_samples),
+            np.linspace(ylim[1], ylim[0], self._n_weight_samples)
+        )
+        pos = np.dstack((self.x1, self.x2))
+        active_mu, active_sigma = self.select_random_variables(self._active_idx)
+        weight_density = multivariate_normal.pdf(pos, active_mu, active_sigma)
+
     
         if initialize:
-            self._weight_plot = self._ax_weight.imshow(self.weight_density, cmap='Blues', aspect='auto', extent=extent)
+            xlim = self._ax_weight.set_xlim()
+            ylim = self._ax_weight.set_ylim()
+            extent = (xlim[0], xlim[1], ylim[0], ylim[1])
+
+            self._weight_plot = self._ax_weight.imshow(weight_density, cmap='Blues', aspect='auto', extent=extent)
             self._ax_weight.set_title('Weight space')
-        elif update_dist:
-            self._weight_plot.set_data(self.weight_density)
-            self._weight_plot.set_extent(extent)
         else:
-            self._weight_plot.set_extent(extent)
+            self._weight_plot.set_data(weight_density)
+
 
         self._weight_plot.figure.canvas.draw_idle()
 
@@ -245,7 +249,7 @@ class InteractiveGaussian(Gaussian):
         """
         xlim = self._ax_func.set_xlim()
         ylim = self._ax_func.set_ylim()
-        y = np.linspace(ylim[0], ylim[1], self._n_samples)
+        y = np.linspace(ylim[0], ylim[1], self._n_feature_samples)
 
         # Project into function space.
         function_dist = self.project(self._features)
@@ -263,11 +267,11 @@ class InteractiveGaussian(Gaussian):
         
         self._func_plot.figure.canvas.draw_idle()
 
-    def plot(self, update_dist=False) -> None:
+    def plot(self) -> None:
         """
         Plots the current weight and function space distributions to their assigned axes.
         """
-        self._plot_weight_distribution(update_dist=update_dist)
+        self._plot_weight_distribution()
         self._plot_function_distribution()
 
     def on_mouse_move(self, event) -> None:

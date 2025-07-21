@@ -2,6 +2,7 @@ from gaussians import InteractiveGaussian
 from features import *
 import numpy as np
 import matplotlib.pyplot as plt
+from feature_controls import FeatureVectorController
 
 
 def start_regression():
@@ -17,6 +18,8 @@ def start_regression():
     xlim_func = (-5, 5)
     ylim_func = (-15, 15)
 
+    plt.rcParams['font.size'] = 5
+
     x = np.linspace(xlim_func[0], xlim_func[1], number_samples)
 
     # Create a linear function with random offset and slope.
@@ -29,7 +32,11 @@ def start_regression():
     samples = (offset + x * slope) + sample_noise
 
     # Set up plots for weight and function space.
-    fig, (ax_weight, ax_func) = plt.subplots(nrows=1, ncols=2, dpi=200, figsize=(6, 3))
+    # Set ip three axes:
+    # - axis for control panel, only reserving space, no plots happening here.
+    # - axis for weight space plot.
+    # - axis for function space plot.
+    fig, (ax_controls, ax_weight, ax_func) = plt.subplots(nrows=1, ncols=3, dpi=200, figsize=(6, 3), gridspec_kw={'width_ratios': [1, 2, 2]})
     ax_weight.set_xlim(xlim_weight)
     ax_weight.set_ylim(ylim_weight)
     ax_func.set_xlim(xlim_func)
@@ -38,11 +45,13 @@ def start_regression():
     ax_weight.set_ylabel('$w_2$')
     ax_func.set_xlabel('$x$')
     ax_func.set_ylabel('$f_w(x)$')
+    ax_controls.axis('off')
 
     # Forward default features and axes to the model.
-    # features = FeatureVector([SineFeature(n_pi=2), PolynomialFeature(power=1)])
-    features = FeatureVector([PolynomialFeature(power=2), PolynomialFeature(power=0), PolynomialFeature(1)])
-    model = InteractiveGaussian(features, ax_weight, ax_func)
+    init_features = FeatureVector([PolynomialFeature(power=2), SineFeature(n_pi=1), PolynomialFeature(1)])
+    model = InteractiveGaussian(init_features, ax_weight, ax_func)
+
+    feature_controller = FeatureVectorController(fig, model)
 
     # Connect matplotlib callbacks.
     fig.canvas.mpl_connect('button_press_event', model.on_mouse_button_down)

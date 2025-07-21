@@ -12,6 +12,12 @@ vmax = 0.3
 
 scroll_sensitivity = 0.3
 
+# The resolution of the weight and function space plots in pixel per axis.
+# As the weight distribution is wide and smooth most of the time, it does not require
+# a very high resolution.
+n_samples_weight    = 100
+n_samples_func      = 300
+
 def get_gaussian(x, mu, sigma) -> Union[float, np.array]:
     """
     Returns the value of a Gaussian function with mean mu and standard deviation sigma at value x.
@@ -119,13 +125,7 @@ class InteractiveGaussian(Gaussian):
         # The two weight distributions to display on the weight space plot.
         self._active_idx = [0, 1]
 
-        # The resolution of the weight and function space plots.
-        # As the weight distribution is wide and smooth most of the time, it does not require
-        # a very high resolution to look pleasing.
-        self._n_weight_samples  = 100
-        self._n_feature_samples = 300
-
-        # Phi is a FeatureVector, features is phi evaluated at _n_feature_samples x-positions.
+        # Phi is a FeatureVector, features is phi evaluated at n_samples_func x-positions.
         self.phi: FeatureVector = None
         self._features: np.array = None
 
@@ -137,20 +137,39 @@ class InteractiveGaussian(Gaussian):
 
     def _setup(self, phi: FeatureVector, weight_space_ax: plt.axis, function_space_ax: plt.axis) -> None:
         """
-        Initializes feature samples from FeatureVector.
-        Sets the two axes to which the weight space and function space distributions are plotted.
-        Creates a weight density array, which is reused as long as sigma does not change. Initializes
-        the plots.
+        Creates arrays of samples at which the weight and function space distributions are evaluated.
+        Evaluates FeatureVector at these samples and initializes the plots.
 
-        phi(x):             A function that returns the feature vector of the model evaluated at position x,
-                            where x can be a numpy array.
-        weight_space_ax:    Matplotlib axis to draw the weight space distribution onto.
-        function_space_ax:  Matplotlib axis to draw the function space distribution onto.
+        Attributes
+        ----------
+
+        phi: `FeatureVector`
+            The feature vector associated with this Gaussian. 
+        weight_space_ax: `matplotlib.pyplot.axis`
+            Matplotlib axis to draw the weight space distribution onto.
+        function_space_ax: `matplotlib.pyplot.axis`
+            Matplotlib axis to draw the function space distribution onto.
         """
         self.phi = phi
 
         self._ax_weight: plt.axis = weight_space_ax
         self._ax_func: plt.axis = function_space_ax
+
+        # Calculate samples at which weight and function space distributions are calculated.
+        xlim = self._ax_weight.set_xlim()
+        ylim = self._ax_weight.set_ylim()
+
+        # As imshow is used instead of contourf() or similar, the y-axis has to be mirrored by convention.
+        self.x1, self.x2 = np.meshgrid(
+            np.linspace(xlim[0], xlim[1], n_samples_weight),
+            np.linspace(ylim[1], ylim[0], n_samples_weight)
+        )
+        self._weight_samples = np.dstack((self.x1, self.x2))
+
+        xlim = self._ax_func.set_xlim()
+        ylim = self._ax_func.set_ylim()
+        self._func_samples_x = np.linspace(xlim[0], xlim[1], n_samples_func)
+        self._func_samples_y = np.linspace(ylim[1], ylim[0], n_samples_func)
    
         self._update_features()
 
@@ -159,14 +178,11 @@ class InteractiveGaussian(Gaussian):
 
     def _update_features(self):
         """
-        Evaluates the feature vector self.phi at different x-positions. self._n_feature_samples positions
-        are chosen from within the plotted function space interval. The evaluated values are
+        Evaluates the feature vector self.phi at self._func_samples_x The evaluated values are
         stored in self._features.
         Call everytime self.phi changes.
         """
-        xlim = self._ax_func.set_xlim()
-        x = np.linspace(xlim[0], xlim[1], self._n_feature_samples)
-        self._features = self.phi(x)
+        self._features = self.phi(self._func_samples_x)
 
     def add_feature(self, feature: Feature):
         """
@@ -216,17 +232,8 @@ class InteractiveGaussian(Gaussian):
 
         initialize == False:    Updates only the data of the existing plot.
         """
-        xlim = self._ax_weight.set_xlim()
-        ylim = self._ax_weight.set_ylim()
-
-        # As i use imshow and not plotting as contourf() or similar, the y-axis has to be mirrored by convention.
-        self.x1, self.x2 = np.meshgrid(
-            np.linspace(xlim[0], xlim[1], self._n_weight_samples),
-            np.linspace(ylim[1], ylim[0], self._n_weight_samples)
-        )
-        pos = np.dstack((self.x1, self.x2))
         active_mu, active_sigma = self.select_random_variables(self._active_idx)
-        weight_density = multivariate_normal.pdf(pos, active_mu, active_sigma)
+        weight_density = multivariate_normal.pdf(self._weight_samples, active_mu, active_sigma)
 
     
         if initialize:
@@ -249,7 +256,6 @@ class InteractiveGaussian(Gaussian):
         """
         xlim = self._ax_func.set_xlim()
         ylim = self._ax_func.set_ylim()
-        y = np.linspace(ylim[0], ylim[1], self._n_feature_samples)
 
         # Project into function space.
         function_dist = self.project(self._features)
@@ -257,7 +263,7 @@ class InteractiveGaussian(Gaussian):
         # TODO this is correct if sigma is diagonal, but what if it is not?
         sigma = function_dist.sigma.diagonal()
 
-        densities = get_gaussian(-y[None, :].T, mu[None, :], sigma[None, :])
+        densities = get_gaussian(self._func_samples_y[None, :].T, mu[None, :], sigma[None, :])
 
         if initialize:
             self._ax_func.set_title('Function space')

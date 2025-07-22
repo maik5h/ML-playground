@@ -63,7 +63,7 @@ class Gaussian:
     
     def select_random_variables(self, indices: List[SupportsIndex]) -> List[np.array]:
         """
-        Selects the random variables at the input indices and marginalizes out all other variables.
+        Selects the random variables at the input indices by marginalizing out all other variables.
         Returns the corresponding mean vector mu and covariance matrix sigma.
         """
         mu = self.mu
@@ -109,8 +109,13 @@ class InteractiveGaussian(Gaussian):
 
         super().__init__(np.zeros(len(phi)), np.eye(len(phi)))
 
-        # Indicates if the user is currently dragging the weight distribution.
+        # Indicates if the user is currently dragging the weight distribution and if x, y or r keys are pressed.
         self._dragging = False
+        self._key_pressed = {
+            'x': False,
+            'y': False,
+            'r': False
+        }
 
         # The two weight distributions to display on the weight space plot.
         self._active_idx = [0, 1]
@@ -205,13 +210,66 @@ class InteractiveGaussian(Gaussian):
         self._update_features()
         self._plot_function_distribution()
 
+    def _scale_sigma(self, factor: float, direction: tuple[bool, bool]) -> None:
+        """
+        Scales the sigma matrix entries concerning the currently displayed random variables.
 
-    def scale_sigma(self, scale: float) -> None:
+        Attributes
+        ----------
+
+        factor: `float`
+            The scaling factor applied to the affected entries.
+        direction: `tuple[bool, bool]`
+            Indicates whether to scale the entry corresponding to the currently displayed variables or not.
+            direction[0] == True: scale along self._active_idx[0]
+            direction[1] == True: scale along self._active_idx[1]
         """
-        Scales the sigma in all dimensions by scale and updates the weight space plot.
-        """
-        self.sigma *= scale
+        # Define a 2D scaling matrix that scales only the directions set to True.
+        scale = np.array(((factor if direction[0] else 1, 0),
+                          (0, factor if direction[1] else 1)))
+
+        # Select currently displayed random variables and apply the scaling matrix to their sigma.
+        _, sigma = self.select_random_variables(self._active_idx)
+        sigma = scale @ sigma @ scale.T
+
+        # Copy scaled sigma values back into self.sigma.
+        for i in (0, 1):
+            for j in (0, 1):
+                self.sigma[self._active_idx[i], self._active_idx[j]] = sigma[i, j]
+            
         self.plot()
+    
+    def _rotate_sigma(self, angle: float) -> None:
+        """
+        Rotates the pdf with respect to the currently displayed random variables around their mean
+        """
+        rot = np.array(((np.cos(angle), -np.sin(angle)), (np.sin(angle), np.cos(angle))))
+
+        # Select currently displayed random variables and apply rotation matrix to their sigma.
+        _, sigma = self.select_random_variables(self._active_idx)
+        sigma = rot @ sigma @ rot.T
+
+        # Copy rotated sigma values back into self.sigma.
+        for i in (0, 1):
+            for j in (0, 1):
+                self.sigma[self._active_idx[i], self._active_idx[j]] = sigma[i, j]
+        
+        self.plot()
+    
+    def _reset_active_variables(self):
+        """
+        Resets the currently displayed random variables to mean zero and diagonal covariance one.
+        """
+        self.mu[self._active_idx[0]] = 0
+        self.mu[self._active_idx[1]] = 0
+
+        self.sigma[self._active_idx[0], self._active_idx[0]] = 1
+        self.sigma[self._active_idx[1], self._active_idx[1]] = 1
+        self.sigma[self._active_idx[0], self._active_idx[1]] = 0
+        self.sigma[self._active_idx[1], self._active_idx[0]] = 0
+
+        self.plot()
+
 
     def _plot_weight_distribution(self, initialize=False) -> None:
         """
@@ -241,18 +299,25 @@ class InteractiveGaussian(Gaussian):
     def _plot_function_distribution(self, initialize=False) -> None:
         """
         Calculate the function distribution from the weight distribution and plot it to self._ax_func.
-        The distribution over function values f(x) for a given x is Gaussian.
         """
         xlim = self._ax_func.set_xlim()
         ylim = self._ax_func.set_ylim()
 
-        # Project into function space.
-        function_dist = self.project(self._features)
-        mu = function_dist.mu
-        # TODO this is correct if sigma is diagonal, but what if it is not?
-        sigma = function_dist.sigma.diagonal()
+        # To obtain the distribution over function values at a given x, the weights are multiplied with
+        # the feature vector phi evaluated at that x: phi(x) @ w = phi_0(x) * w_0 + phi_1(x) * w_1 + ...
 
-        densities = get_gaussian(self._func_samples_y[None, :].T, mu[None, :], sigma[None, :])
+        # The product of _features with mu creates an array of size len(_features) with the
+        # new mean for every x value corresponding to the entries in _features.
+        mu = self._features @ self.mu
+
+        # The variance of sigma transformed by a single feature is given by
+        # new_sigma = feature @ sigma @ feature.T. However, since broadcasting is used
+        # I deviate from this form and use an element wise multiplication followed
+        # by a summation instead. This performs the multiplication and subsequent
+        # summation otherwise done by the inner product for every of the stacked features.
+        sigma = np.sum(self._features.T * (self.sigma @ self._features.T), axis=0)
+
+        densities = get_gaussian(self._func_samples_y[None, :].T, mu, sigma)
 
         if initialize:
             self._ax_func.set_title('Function space')
@@ -281,10 +346,14 @@ class InteractiveGaussian(Gaussian):
 
     def on_mouse_button_down(self, event) -> None:
         """
-        Start dragging if left button was pressed.
+        Start dragging if left button was pressed. Resets the distribution of the currently displayed
+        if doubleclicked.
         """
         if event.button == MouseButton.LEFT:
             self._dragging = True
+        
+        if event.dblclick:
+            self._reset_active_variables()
 
     def on_mouse_button_up(self, event) -> None:
         """
@@ -292,12 +361,50 @@ class InteractiveGaussian(Gaussian):
         """
         if event.button == MouseButton.LEFT:
             self._dragging = False
+        
+    def on_key_pressed(self, event) -> None:
+        """
+        Registers if keys of interest ('x', 'y' or 'r') have been pressed.
+        """
+        # If multiple keys are pressed at once, they are indicated as 'key1+key2+...'.
+        keys = event.key.split('+')
+        for key in keys:
+            if key in self._key_pressed.keys():
+                self._key_pressed[key] = True
+    
+    def on_key_released(self, event) -> None:
+        """
+        Registers if keys of interest ('x', 'y', 'r') have been released.
+        """
+        # If multiple keys are released at once, they are indicated as 'key1+key2+...'.
+        keys = event.key.split('+')
+        for key in keys:
+            if key in self._key_pressed.keys():
+                self._key_pressed[key] = False
     
     def on_scroll_event(self, event) -> None:
         """
-        Adjusts all entries in sigma when scrolled over the weight space plot.
+        Either scales the distribution of the currently displayed variables
+        - along x-direction if 'x' key is pressed,
+        - along y-direction if 'y'-key is pressed,
+        - along both directions if both 'x'- and 'y' key or none of them are pressed.
+
+        or rotates the distribution if 'r'-key is pressed.
         """
-        if event.button == 'up':
-            self.scale_sigma(1 - Config.mouse_wheel_sensitivity)
-        elif event.button == 'down':
-            self.scale_sigma(1 / (1 - Config.mouse_wheel_sensitivity))
+        # if alt is pressed, only rotate regardless of other key states.
+        if self._key_pressed['r']:
+            angle = Config.mouse_wheel_sensitivity
+            angle = angle if event.button == 'up' else -angle
+            self._rotate_sigma(angle)
+
+        else:
+            if event.button == 'up':
+                factor = 1 - Config.mouse_wheel_sensitivity
+            elif event.button == 'down':
+                factor = 1 / (1 - Config.mouse_wheel_sensitivity)
+
+            # Scale both directions if no button is pressed and only the selected directions else.
+            if not (self._key_pressed['x'] or self._key_pressed['y']):
+                self._scale_sigma(factor, (True, True))
+            else:
+                self._scale_sigma(factor, (self._key_pressed['x'], self._key_pressed['y']))

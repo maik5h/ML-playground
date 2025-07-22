@@ -45,7 +45,7 @@ def start_regression():
     ax_controls.axis('off')
 
     # Forward default features and axes to the model.
-    init_features = FeatureVector([PolynomialFeature(power=2), SineFeature(n_pi=1), PolynomialFeature(1)])
+    init_features = FeatureVector([PolynomialFeature(power=0), PolynomialFeature(1)])
     model = InteractiveGaussian(init_features, ax_weight, ax_func)
 
     feature_controller = FeatureVectorController(fig, model)
@@ -54,6 +54,8 @@ def start_regression():
     fig.canvas.mpl_connect('button_press_event', model.on_mouse_button_down)
     fig.canvas.mpl_connect('motion_notify_event', model.on_mouse_move)
     fig.canvas.mpl_connect('button_release_event', model.on_mouse_button_up)
+    fig.canvas.mpl_connect('key_press_event', model.on_key_pressed)
+    fig.canvas.mpl_connect('key_release_event', model.on_key_released)
     fig.canvas.mpl_connect('scroll_event', model.on_scroll_event)
 
     # Let the model plots its distributions

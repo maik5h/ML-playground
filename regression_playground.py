@@ -34,6 +34,7 @@ def start_regression():
     # - axis for weight space plot.
     # - axis for function space plot.
     fig, (ax_controls, ax_weight, ax_func) = plt.subplots(nrows=1, ncols=3, dpi=200, figsize=(6, 3), gridspec_kw={'width_ratios': [1, 2, 2]})
+    plt.subplots_adjust(wspace=0.3, left=0.06, right=0.98, top=0.9)
     ax_weight.set_xlim(Config.weight_space_xlim)
     ax_weight.set_ylim(Config.weight_space_ylim)
     ax_func.set_xlim(Config.function_space_xlim)
@@ -65,5 +66,5 @@ def start_regression():
     ax_func.plot(x, samples, 'k.', markersize=2, label='samples')
     ax_func.legend()
 
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.show()

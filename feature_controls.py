@@ -6,10 +6,10 @@ from typing import List, Union, Literal
 
 
 # The maximum number of features that the FeatureVector class can hold.
-MAX_NUMBER_FEATURES = 9
+MAX_NUMBER_FEATURES = 12
 
 # The distance relative to the full figure in which buttons are spaced in y-direction.
-Y_SPACING = 0.08
+Y_SPACING = 0.06
 
 def pos(element: Literal['button', 'controller'], row: int):
     """
@@ -27,9 +27,9 @@ def pos(element: Literal['button', 'controller'], row: int):
         The desired row index of the element. 
     """
     x = 0.02
-    y = 0.9
+    y = 0.85
     w = 0.2
-    h = 0.07
+    h = 0.05
 
     row_offset = 3 if element == 'controller' else 0
 
@@ -110,7 +110,7 @@ class FeatureController:
 
         ax_label.axis('off')
 
-        self._slider     = Slider(ax_slider, '', valmin=0, valmax=4, valinit=0, valstep=1)
+        self._slider     = Slider(ax_slider, '', valmin=0, valmax=4, valinit=0, valstep=1, handle_style={'size': 5})
         self._label      = ax_label.text(0, 0, '', verticalalignment='top')
         self._x_button   = Button(ax_button, 'X', color='#DF908F', hovercolor='#F5BDBC')
 
@@ -133,8 +133,8 @@ class FeatureController:
         height  = new_position[3]
 
         self._label.axes.set_position([x, y + height, 0.6*width, 0.5*height])
-        self._slider.ax.set_position([x, y, 0.6*width, 0.5*height])
-        self._x_button.ax.set_position([x + 0.7*width, y, 0.3*width, height])
+        self._slider.ax.set_position([x, y, 0.75*width, 0.5*height])
+        self._x_button.ax.set_position([x + 0.85*width, y, 0.15*width, height])
     
     def set_idx(self, new_idx: int) -> None:
         """

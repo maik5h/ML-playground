@@ -24,7 +24,7 @@ class Config:
 
     # ----- Controls -----
     # The sensitivity of the mouse wheel when editing the Gaussians covariance.
-    mouse_wheel_sensitivity: float = 0.3
+    mouse_wheel_sensitivity: float = 1
 
 
     # ----- learning -----
@@ -47,4 +47,12 @@ def load_config(path='./config.json'):
     for sub_cfg in cfg.values():
         for key in sub_cfg:
             setattr(Config, key, sub_cfg[key])
+
+    # Check if loaded values are valid:
+
+    # Mouse wheel sensitivities larger than three might couse division by zero or negative covariance
+    # values by scaling too fast.
+    if Config.mouse_wheel_sensitivity > 3:
+        Config.mouse_wheel_sensitivity = 3
+        warning('Mouse wheel sensitivity larger than 3 is not supported. Sensitivity of 3 is used.')
 

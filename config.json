@@ -9,7 +9,7 @@
         "colormap_vmax":            0.3
     },
     "controls": {
-        "mouse_wheel_sensitivity": 0.3
+        "mouse_wheel_sensitivity": 1
     },
     "learning": {
         "number_target_samples": 100

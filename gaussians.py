@@ -502,15 +502,20 @@ class InteractiveGaussian(Gaussian):
         """
         # If alt is pressed, only rotate regardless of other key states.
         if self._key_pressed['r']:
-            angle = Config.mouse_wheel_sensitivity
+            angle = 0.1 * Config.mouse_wheel_sensitivity
             angle = angle if event.button == 'up' else -angle
+
+            # Snap angle to some integer fraction of pi, so the initial state is always restored after
+            # a finite amount of scroll events.
+            angle = (np.pi) / (int(np.pi / angle))
+
             self._rotate_sigma(angle)
 
         else:
             if event.button == 'up':
-                factor = 1 - Config.mouse_wheel_sensitivity
+                factor = 1 - 0.3 * Config.mouse_wheel_sensitivity
             elif event.button == 'down':
-                factor = 1 / (1 - Config.mouse_wheel_sensitivity)
+                factor = 1 / (1 - 0.3 * Config.mouse_wheel_sensitivity)
 
             # Scale both directions if no button is pressed and only the selected directions else.
             if not (self._key_pressed['x'] or self._key_pressed['y']):

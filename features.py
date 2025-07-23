@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List
+from typing import List, SupportsIndex
 
 
 class Feature:
@@ -101,4 +101,7 @@ class FeatureVector:
 
     def __len__(self):
         return len(self.features)
+
+    def __getitem__(self, index: SupportsIndex) -> Feature:
+        return self.features[index]
     

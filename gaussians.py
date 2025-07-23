@@ -2,8 +2,9 @@ from features import FeatureVector, Feature
 import numpy as np
 from matplotlib.backend_bases import MouseButton
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Button
 from scipy.stats import multivariate_normal
-from typing import Union, List, SupportsIndex
+from typing import Union, Literal
 from logging import warning
 from config import Config
 
@@ -61,24 +62,36 @@ class Gaussian:
         self.sigma = np.delete(self.sigma, idx, axis=0)
         self.sigma = np.delete(self.sigma, idx, axis=1)
     
-    def select_random_variables(self, indices: List[SupportsIndex]) -> List[np.array]:
+    def select_random_variables(self, indices: tuple[int, int]) -> tuple[np.array, np.array]:
         """
         Selects the random variables at the input indices by marginalizing out all other variables.
         Returns the corresponding mean vector mu and covariance matrix sigma.
+
+        Only supports the selection of exactly two variables.
         """
+        # When considering the order of indices, it is more straightforward to just implement the relevant
+        # case of len(indices) == 2 instead of a general method. (For now, this may be subject to future efforts)
+        if not len(indices) == 2:
+            raise ValueError("Selecting any number of random variables other than two is not supported.")
+
         mu = self.mu
         sigma = self.sigma
 
         # Find the indices to remove.
         rm_indices = [len(self.mu) - n - 1 for n in range(len(self.mu))]
         for i in indices:
-            rm_indices.remove(indices[i])
+            rm_indices.remove(i)
 
         for idx in rm_indices:
             mu = np.delete(mu, idx)
             sigma = np.delete(sigma, idx, axis=0)
             sigma = np.delete(sigma, idx, axis=1)
         
+        # If indices is in descending order, flip the resulting mu and sigma arrays.
+        if indices[0] > indices[1]:
+            mu[0], mu[1] = mu[1], mu[0]
+            sigma = np.flip(sigma, (0, 1))
+
         return mu, sigma
 
     # def condition(self, A: np.array, y: np.array):
@@ -166,18 +179,65 @@ class InteractiveGaussian(Gaussian):
         self._func_samples_x = np.linspace(xlim[0], xlim[1], Config.function_space_samples)
         self._func_samples_y = np.linspace(ylim[1], ylim[0], Config.function_space_samples)
    
+        self._setup_weight_buttons()
+
         self._update_features()
 
         self._plot_weight_distribution(initialize=True)
         self._plot_function_distribution(initialize=True)
+    
+    def _setup_weight_buttons(self) -> None:
+        """
+        Initializes the buttons serving as the weight space x and y labels.
+        """
+        # I do not care about proper alignment, it would be too tidious for a small project
+        # like this and unnecessarily bloat the code. The position and size of the buttons
+        # scales with the axis but apart from that it is rather arbitrary. 
+        # Finished is better than perfect.
+
+        # Instead of x and y labels, two Buttons are added to the weight space plot.
+        pos = self._ax_weight.get_position()
+
+        # The width of both buttons is determined from the width of the axis, for the x_button y-position
+        # an arbitrary value of 10% of the lower axis y-position has been chosen.
+        x_button_width = (pos.x1 - pos.x0) / 3
+        x_button_height = 0.4 * x_button_width
+        x_button_ax = plt.axes(((pos.x0 + pos.x1 - x_button_width) / 2,
+                                pos.y0 * 0.1,
+                                x_button_width,
+                                x_button_height))
+
+        self._weight_x_button = Button(x_button_ax, '')
+        self._weight_x_button.on_clicked(lambda event: self._cycle_displayed_weight('x'))
+
+        # Coordinates are relative, so width and height have to be scaled with the figures aspect ratio.
+        aspect = 1 / 2
+        y_button_x_offset = (pos.x1 - pos.x0) * 0.2
+        y_button_ax = plt.axes((pos.x0 - y_button_x_offset,
+                                (pos.y0 + pos.y1 - x_button_width / aspect) / 2,
+                                x_button_height * aspect,
+                                x_button_width / aspect))
+
+        self._weight_y_button = Button(y_button_ax, '')
+        self._weight_y_button.label.set_rotation(90)
+        self._weight_y_button.on_clicked(lambda event: self._cycle_displayed_weight('y'))
 
     def _update_features(self):
         """
-        Evaluates the feature vector self.phi at self._func_samples_x The evaluated values are
-        stored in self._features.
+        Evaluates the feature vector self.phi at self._func_samples_x and stores the samples
+        in self._features. Also updates the x and y label buttons of the weight space plot
+        to display the correct description.
         Call everytime self.phi changes.
         """
         self._features = self.phi(self._func_samples_x)
+
+        x_idx = self._active_idx[0]
+        x_button_label = f'$w_{x_idx+1} (\phi_{x_idx+1}={self.phi.features[x_idx].get_expression()})$'
+        self._weight_x_button.label.set_text(x_button_label)
+
+        y_idx = self._active_idx[1]
+        y_button_label = f'$w_{y_idx+1} (\phi_{y_idx+1}={self.phi.features[y_idx].get_expression()})$'
+        self._weight_y_button.label.set_text(y_button_label)
 
     def add_feature(self, feature: Feature):
         """
@@ -193,12 +253,36 @@ class InteractiveGaussian(Gaussian):
 
         self.plot()
     
-    def remove_feature(self, idx: int) -> None:
+    def remove_feature(self, rm_idx: int) -> None:
+        """
+        Removes a feature from the FeatureVector associated with this instance and removes the
+        corresponding weight from this distribution.
+
+        Attributes
+        ----------
+        rm_idx: `int`
+            The index of the feature and weight to be removed.
+        """
+        # To update the currently displayed weights, two cases have to be considered:
+        # If a feature has been removed, all following features shift by one in the list. Make sure the
+        # displayed features dont change when it happens.
+        for i in (0, 1):
+            if self._active_idx[i] > rm_idx:
+                self._active_idx[i] -= 1
+        
+        # If the last feature in the list was displayed and has been removed, set the corresponding
+        # active index to 0 or 1 if 0 is occupied.
+        if rm_idx == len(self.phi) - 1:
+            if self._active_idx[0] == rm_idx:
+                self._active_idx[0] = 0 if not self._active_idx[1] == 0 else 1
+            elif self._active_idx[1] == rm_idx:
+                self._active_idx[1] = 0 if not self._active_idx[0] == 0 else 1
+
         # Remove dimension from parent Gaussian.
-        self.remove_random_variable(idx)
+        self.remove_random_variable(rm_idx)
 
         # Remove the feature from phi and update the array of features evaluated at x-values.
-        self.phi.remove_feature(idx)
+        self.phi.remove_feature(rm_idx)
         self._update_features()
 
         self.plot()
@@ -321,6 +405,8 @@ class InteractiveGaussian(Gaussian):
 
         if initialize:
             self._ax_func.set_title('Function space')
+            self._ax_func.set_xlabel('x')
+            self._ax_func.set_ylabel('f(x)')
             self._func_plot = self._ax_func.imshow(densities, cmap='Blues', aspect='auto', extent=(xlim[0], xlim[1], ylim[0], ylim[1]), vmax=Config.colormap_vmax)
         else:
             self._func_plot.set_data(densities)
@@ -333,7 +419,30 @@ class InteractiveGaussian(Gaussian):
         """
         self._plot_weight_distribution()
         self._plot_function_distribution()
+    
+    def _cycle_displayed_weight(self, axis: Literal['x', 'y']) -> None:
+        """
+        Changes the weight displayed at idx (idx == 0: x-axis, idx == 1: y-axis) in the weight space plot.
+        Cycles through available indices while skipping the one that is currently displayed on the other axis.
+        """
+        idx = 0 if axis == 'x' else 1
+        # Increase active index by one and jump back to start if last index is surpassed.
+        self._active_idx[idx] = (self._active_idx[idx] + 1) % len(self.mu)
 
+        # If both axes show the same distribution, increase once again.
+        if self._active_idx[0] == self._active_idx[1]:
+            self._active_idx[idx] = (self._active_idx[idx] + 1) % len(self.mu)
+        
+        # Update the button label.
+        n = self._active_idx[idx]
+        label = f'$w_{n+1} (\phi_{n+1}={self.phi.features[n].get_expression()})$'
+        if idx == 0:
+            self._weight_x_button.label.set_text(label)
+        elif idx == 1:
+            self._weight_y_button.label.set_text(label)
+
+        self.plot()
+        
     def on_mouse_move(self, event) -> None:
         """
         Updates mu to be equal to the mouse position if mouse is currently dragging and 
@@ -391,7 +500,7 @@ class InteractiveGaussian(Gaussian):
 
         or rotates the distribution if 'r'-key is pressed.
         """
-        # if alt is pressed, only rotate regardless of other key states.
+        # If alt is pressed, only rotate regardless of other key states.
         if self._key_pressed['r']:
             angle = Config.mouse_wheel_sensitivity
             angle = angle if event.button == 'up' else -angle

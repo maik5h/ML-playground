@@ -39,10 +39,6 @@ def start_regression():
     ax_weight.set_ylim(Config.weight_space_ylim)
     ax_func.set_xlim(Config.function_space_xlim)
     ax_func.set_ylim(Config.function_space_ylim)
-    ax_weight.set_xlabel('$w_1$')
-    ax_weight.set_ylabel('$w_2$')
-    ax_func.set_xlabel('$x$')
-    ax_func.set_ylabel('$f_w(x)$')
     ax_controls.axis('off')
 
     # Forward default features and axes to the model.
@@ -66,5 +62,4 @@ def start_regression():
     ax_func.plot(x, samples, 'k.', markersize=2, label='samples')
     ax_func.legend()
 
-    # plt.tight_layout()
     plt.show()

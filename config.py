@@ -31,6 +31,13 @@ class Config:
     # The number of samples from the function to be approximated.
     number_target_samples: int = 100
 
+    # Variance of the Gaussian noise distribution added to the target samples.
+    target_noise_amount: float = 1
+
+    # The time in milliseconds between weight updates. This is the minimum time a step will take, the
+    # actual time is limited by the time it takes to update the weights and to plot the distributions.
+    time_per_learning_step: float = 300
+
 def load_config(path='./config.json'):
     """
     Copies the configuration from the json file at path into the static attributes of the Config class.

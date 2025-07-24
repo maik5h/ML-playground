@@ -12,6 +12,8 @@
         "mouse_wheel_sensitivity": 1
     },
     "learning": {
-        "number_target_samples": 100
+        "number_target_samples": 100,
+        "target_noise_amount": 1,
+        "time_per_learning_step": 300
     }
 }

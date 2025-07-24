@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from feature_controls import FeatureVectorController
 from config import load_config, Config
+from learning import InteractiveTrainer
 
 
 def start_regression():
@@ -17,24 +18,13 @@ def start_regression():
 
     plt.rcParams['font.size'] = 5
 
-    x = np.linspace(Config.function_space_xlim[0], Config.function_space_xlim[1], Config.number_target_samples)
-
-    # Create a linear function with random offset and slope.
-    offset = np.random.rand() * 5 - 2.5
-    slope = np.random.rand() * 6 - 3
-
-    # Create noise vector to be added to samples.
-    noise_amount = 0.5
-    sample_noise = np.random.normal(loc=0, scale=noise_amount, size=Config.number_target_samples)
-    samples = (offset + x * slope) + sample_noise
-
     # Set up plots for weight and function space.
     # Set ip three axes:
     # - axis for control panel, only reserving space, no plots happening here.
     # - axis for weight space plot.
     # - axis for function space plot.
     fig, (ax_controls, ax_weight, ax_func) = plt.subplots(nrows=1, ncols=3, dpi=200, figsize=(6, 3), gridspec_kw={'width_ratios': [1, 2, 2]})
-    plt.subplots_adjust(wspace=0.3, left=0.06, right=0.98, top=0.9)
+    plt.subplots_adjust(wspace=0.3, left=0.06, right=0.98, top=0.75)
     ax_weight.set_xlim(Config.weight_space_xlim)
     ax_weight.set_ylim(Config.weight_space_ylim)
     ax_func.set_xlim(Config.function_space_xlim)
@@ -47,6 +37,9 @@ def start_regression():
 
     feature_controller = FeatureVectorController(fig, model)
 
+    trainer_x = ax_weight.get_position().x0
+    trainer = InteractiveTrainer((trainer_x, 0.85, 0.98, 0.95), model, fig, ax_func)
+
     # Connect matplotlib callbacks.
     fig.canvas.mpl_connect('button_press_event', model.on_mouse_button_down)
     fig.canvas.mpl_connect('motion_notify_event', model.on_mouse_move)
@@ -54,12 +47,9 @@ def start_regression():
     fig.canvas.mpl_connect('key_press_event', model.on_key_pressed)
     fig.canvas.mpl_connect('key_release_event', model.on_key_released)
     fig.canvas.mpl_connect('scroll_event', model.on_scroll_event)
+    fig.canvas.mpl_connect('key_press_event', trainer.on_key_press)
 
-    # Let the model plots its distributions
+    # Let the model plot its distributions.
     model.plot()
-
-    # Plot sampled datapoints on top of function space distribution.
-    ax_func.plot(x, samples, 'k.', markersize=2, label='samples')
-    ax_func.legend()
 
     plt.show()

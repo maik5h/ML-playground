@@ -38,6 +38,9 @@ class Config:
     # actual time is limited by the time it takes to update the weights and to plot the distributions.
     time_per_learning_step: float = 300
 
+    # Batch size of the dataloader.
+    samples_per_learning_step: int = 1
+
 def load_config(path='./config.json'):
     """
     Copies the configuration from the json file at path into the static attributes of the Config class.

@@ -1,7 +1,7 @@
 {
     "visuals": {
-        "weight_space_samples":     100,
-        "function_space_samples":   300,
+        "weight_space_samples":     400,
+        "function_space_samples":   600,
         "weight_space_xlim":        [-4, 4],
         "weight_space_ylim":        [-4, 4],
         "function_space_xlim":      [-5, 5],
@@ -13,7 +13,8 @@
     },
     "learning": {
         "number_target_samples": 100,
-        "target_noise_amount": 1,
-        "time_per_learning_step": 300
+        "target_noise_amount": 5,
+        "time_per_learning_step": 300,
+        "samples_per_learning_step": 1
     }
 }

@@ -7,6 +7,7 @@ from scipy.stats import multivariate_normal
 from typing import Union, Literal
 from logging import warning
 from config import Config
+import scipy as sc
 
 
 def get_gaussian(x, mu, sigma) -> Union[float, np.array]:
@@ -94,13 +95,28 @@ class Gaussian:
 
         return mu, sigma
 
-    # def condition(self, A: np.array, y: np.array):
-    #     dec = linalg.cho_factor(self.sigma @ A.T @ (A @ self.sigma @ A.T))
+    def condition(self, phi: np.array, Y: np.array, sigma: np.array):
+        """
+        Updates this Gaussian to represent the conditional probability given a linear transformation phi,
+        data Y and the noise amount on the data sigma.
+        """
+        # TODO the data noise sigma is required here. I dont like that as in reality the noise might be unknown.
+        # Is there a way to avoid it?
 
-    #     mu = linalg.cho_solve(dec, (y - A @ self.mu))
-    #     sigma = linalg.cho_solve(dec, A @ self.sigma)
+        # If the data Y conatins only one datum, use simplified form of inference.
+        if Y.shape == (1,):
+            self.mu += ((self.sigma @ phi / (phi.T @ self.sigma @ phi + sigma ** 2)) * (Y - phi.T @ self.mu)).squeeze()
+            self.sigma -= (self.sigma @ phi / (phi.T @ self.sigma @ phi + sigma ** 2)) @ (phi.T @ self.sigma)
 
-    #     return Gaussian(mu, sigma)
+        # If data has multiple points, use cholensky decomposition of the matrix
+        # A = phi.T @ self.sigma @ phi + sigma ** 2 and solve linear equation instead of
+        # explicitly calculating A^-1.
+        else:
+            fac = sc.linalg.cho_factor(phi.T @ self.sigma @ phi + sigma ** 2)
+
+            self.mu += self.sigma @ phi @ sc.linalg.cho_solve(fac, (Y - phi.T @ self.mu))
+            self.sigma -= self.sigma @ phi @ sc.linalg.cho_solve(fac, phi.T @ self.sigma)
+
 
 
 class InteractiveGaussian(Gaussian):

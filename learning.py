@@ -74,10 +74,11 @@ class DataLoader:
         - 'random': returns datapoints in random order.
         - 'least likely': TODO return the point which is the least likely given the current model prediction.
     """
-    def __init__(self, x_data: np.array, y_data: np.array, order: Literal['sequential', 'random', 'least likely']):
+    def __init__(self, x_data: np.array, y_data: np.array, order: Literal['sequential', 'random', 'least likely'], batch_size: int = 1):
         self.x_data = x_data
         self.y_data = y_data
         self._order = order
+        self.batch_size = batch_size
         self._used_indices = []
         self._remaining_indices = np.arange(len(x_data))
     
@@ -124,20 +125,26 @@ class DataLoader:
             raise StopIteration
 
         if self._order == 'sequential':
-            x = self.x_data[self._remaining_indices[0]]
-            y = self.y_data[self._remaining_indices[0]]
-            self._used_indices.append(self._remaining_indices[0])
-            self._remaining_indices = np.delete(self._remaining_indices, 0)
+            x = self.x_data[self._remaining_indices[0: self.batch_size]]
+            y = self.y_data[self._remaining_indices[0: self.batch_size]]
+            self._used_indices.extend(self._remaining_indices[0: self.batch_size])
+            if len(self._remaining_indices) >= self.batch_size:
+                self._remaining_indices = np.delete(self._remaining_indices, slice(0, self.batch_size))
+            else:
+                self._remaining_indices = []
 
             return x, y
         
         elif self._order == 'random':
-            idx = np.random.randint(0, len(self._remaining_indices))
+            idx = np.random.randint(0, len(self._remaining_indices), size=self.batch_size)
 
             x = self.x_data[self._remaining_indices[idx]]
             y = self.y_data[self._remaining_indices[idx]]
-            self._used_indices.append(self._remaining_indices[idx])
-            self._remaining_indices = np.delete(self._remaining_indices, idx)
+            self._used_indices.extend(self._remaining_indices[idx])
+            if len(self._remaining_indices) >= len(idx):
+                self._remaining_indices = np.delete(self._remaining_indices, idx)
+            else:
+                self._remaining_indices = []
 
             return x, y
         
@@ -146,19 +153,6 @@ class DataLoader:
 
     def __len__(self) -> int:
         return len(self.x_data)
-        
-class Trainer:
-    """
-    Class that trains an InteractiveGaussian model.
-    """
-    def __init__(self, gaussian: InteractiveGaussian, data_loader: DataLoader):
-        self.gaussian: InteractiveGaussian = gaussian
-        self._data_loader: DataLoader = data_loader
-    
-    def train(self) -> None:
-        for x, y in self._data_loader:
-            # TODO put learning logic here
-            raise NotImplementedError
 
 class AnimationManager:
     """
@@ -208,7 +202,7 @@ class AnimationManager:
                 self._animation.resume()
                 self._is_playing = True
 
-class InteractiveTrainer(Trainer):
+class InteractiveTrainer:
     """
     Extends the Trainer class by methods to plot the target data, change the dataloader mode and start
     the training during runtime.
@@ -227,9 +221,8 @@ class InteractiveTrainer(Trainer):
         ax: `matplotlib.pyplot.axis`
             The axis to plot the target samples to.
         """
-        # Trainer parent object is initialized with given Gaussian and empty DataLoader with default mode
-        # 'sequential'.
-        super().__init__(gaussian, DataLoader([], [], 'sequential'))
+        self.gaussian: InteractiveGaussian = gaussian
+        self._data_loader: DataLoader = DataLoader([], [], 'sequential')
         self._fig = fig
         self._ax = ax
 
@@ -321,8 +314,18 @@ class InteractiveTrainer(Trainer):
         Updates the target samples plot.
         """
         x, y = self._data_loader.__next__()
-            
-        # TODO Training logic
+
+        # Update the Gaussians weights.
+        phi = self.gaussian.phi(x).T
+        noise_sigma = Config.target_noise_amount * np.eye(len(x))
+        noise_sigma = 1 * np.eye(len(x))
+
+        # If only one datapoint is loaded, remove extra dimension created by np.eye().
+        if len(x) == 1:
+            noise_sigma = noise_sigma[0]
+
+        self.gaussian.condition(phi, y, noise_sigma)
+        self.gaussian.plot()
 
         self._plot_target_samples()
 

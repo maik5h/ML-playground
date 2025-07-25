@@ -283,8 +283,12 @@ class InteractiveGaussian(Gaussian):
         # If a feature has been removed, all following features shift by one in the list. Make sure the
         # displayed features dont change when it happens.
         for i in (0, 1):
-            if self._active_idx[i] > rm_idx:
-                self._active_idx[i] -= 1
+            # Reduce index by one if needed or jump to last value if element 0 was removed.
+            if self._active_idx[i] >= rm_idx:
+                if self._active_idx[i] == 0:
+                    self._active_idx[i] = len(self.phi) - 2
+                else:
+                    self._active_idx[i] -= 1
         
         # If the last feature in the list was displayed and has been removed, set the corresponding
         # active index to 0 or 1 if 0 is occupied.
@@ -456,9 +460,8 @@ class InteractiveGaussian(Gaussian):
             self._weight_x_button.label.set_text(label)
         elif idx == 1:
             self._weight_y_button.label.set_text(label)
-
         self.plot()
-        
+
     def on_mouse_move(self, event) -> None:
         """
         Updates mu to be equal to the mouse position if mouse is currently dragging and 

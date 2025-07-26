@@ -1,6 +1,7 @@
 import json
 from logging import warning
 
+
 class Config:
     """
     Class to store and access the configuration of the regression playground.
@@ -41,7 +42,7 @@ class Config:
     # Batch size of the dataloader.
     samples_per_learning_step: int = 1
 
-def load_config(path='./config.json'):
+def load_config(path: str = './config.json') -> None:
     """
     Copies the configuration from the json file at path into the static attributes of the Config class.
     """

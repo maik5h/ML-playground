@@ -1,6 +1,6 @@
 from features import FeatureVector, Feature
 import numpy as np
-from matplotlib.backend_bases import MouseButton
+from matplotlib.backend_bases import MouseButton, MouseEvent, KeyEvent
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 from scipy.stats import multivariate_normal
@@ -10,7 +10,7 @@ from config import Config
 import scipy as sc
 
 
-def get_gaussian(x, mu, sigma) -> Union[float, np.array]:
+def get_gaussian(x: np.array, mu: np.array, sigma: np.array) -> Union[float, np.array]:
     """
     Returns the value of a Gaussian function with mean mu and standard deviation sigma at value x.
     """
@@ -95,7 +95,7 @@ class Gaussian:
 
         return mu, sigma
 
-    def condition(self, phi: np.array, Y: np.array, sigma: np.array):
+    def condition(self, phi: np.array, Y: np.array, sigma: np.array) -> None:
         """
         Updates this Gaussian to represent the conditional probability given a linear transformation phi,
         data Y and the noise amount on the data sigma.
@@ -238,7 +238,7 @@ class InteractiveGaussian(Gaussian):
         self._weight_y_button.label.set_rotation(90)
         self._weight_y_button.on_clicked(lambda event: self._cycle_displayed_weight('y'))
 
-    def _update_features(self):
+    def _update_features(self) -> None:
         """
         Evaluates the feature vector self.phi at self._func_samples_x and stores the samples
         in self._features. Also updates the x and y label buttons of the weight space plot
@@ -255,7 +255,7 @@ class InteractiveGaussian(Gaussian):
         y_button_label = f'$w_{y_idx+1} (\phi_{y_idx+1}={self.phi[y_idx].get_expression()})$'
         self._weight_y_button.label.set_text(y_button_label)
 
-    def add_feature(self, feature: Feature):
+    def add_feature(self, feature: Feature) -> None:
         """
         Adds a random variable to this Gaussian which corresponds to the input Feature. The plots
         are updated accordingly.
@@ -360,7 +360,7 @@ class InteractiveGaussian(Gaussian):
         
         self.plot()
     
-    def _reset_active_variables(self):
+    def _reset_active_variables(self) -> None:
         """
         Resets the currently displayed random variables to mean zero and diagonal covariance one.
         """
@@ -375,7 +375,7 @@ class InteractiveGaussian(Gaussian):
         self.plot()
 
 
-    def _plot_weight_distribution(self, initialize=False) -> None:
+    def _plot_weight_distribution(self, initialize: bool = False) -> None:
         """
         Plot the weight distribution to self._ax_weight.
 
@@ -397,10 +397,9 @@ class InteractiveGaussian(Gaussian):
         else:
             self._weight_plot.set_data(weight_density)
 
-
         self._weight_plot.figure.canvas.draw_idle()
 
-    def _plot_function_distribution(self, initialize=False) -> None:
+    def _plot_function_distribution(self, initialize: bool = False) -> None:
         """
         Calculate the function distribution from the weight distribution and plot it to self._ax_func.
         """
@@ -462,7 +461,7 @@ class InteractiveGaussian(Gaussian):
             self._weight_y_button.label.set_text(label)
         self.plot()
 
-    def on_mouse_move(self, event) -> None:
+    def on_mouse_move(self, event: MouseEvent) -> None:
         """
         Updates mu to be equal to the mouse position if mouse is currently dragging and 
         inside the weight space plot.
@@ -472,7 +471,7 @@ class InteractiveGaussian(Gaussian):
             self.mu[self._active_idx[1]] = event.ydata
             self.plot()
 
-    def on_mouse_button_down(self, event) -> None:
+    def on_mouse_button_down(self, event: MouseEvent) -> None:
         """
         Start dragging if left button was pressed. Resets the distribution of the currently displayed
         if doubleclicked.
@@ -483,14 +482,14 @@ class InteractiveGaussian(Gaussian):
         if event.dblclick:
             self._reset_active_variables()
 
-    def on_mouse_button_up(self, event) -> None:
+    def on_mouse_button_up(self, event: MouseEvent) -> None:
         """
         Stops dragging if left button has been released.
         """
         if event.button == MouseButton.LEFT:
             self._dragging = False
         
-    def on_key_pressed(self, event) -> None:
+    def on_key_pressed(self, event: KeyEvent) -> None:
         """
         Registers if keys of interest ('x', 'y' or 'r') have been pressed.
         """
@@ -500,7 +499,7 @@ class InteractiveGaussian(Gaussian):
             if key in self._key_pressed.keys():
                 self._key_pressed[key] = True
     
-    def on_key_released(self, event) -> None:
+    def on_key_released(self, event: KeyEvent) -> None:
         """
         Registers if keys of interest ('x', 'y', 'r') have been released.
         """
@@ -510,7 +509,7 @@ class InteractiveGaussian(Gaussian):
             if key in self._key_pressed.keys():
                 self._key_pressed[key] = False
     
-    def on_scroll_event(self, event) -> None:
+    def on_scroll_event(self, event: MouseEvent) -> None:
         """
         Either scales the distribution of the currently displayed variables
         - along x-direction if 'x' key is pressed,

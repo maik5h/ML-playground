@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List, SupportsIndex
+from typing import SupportsIndex
 
 
 class Feature:
@@ -79,7 +79,7 @@ class FeatureVector:
     Class to store multiple features. When forwarded an input array of x-values, returns a stack of the features
     evaluated at the given positions [phi_1(x), phi_2(x), ...].T.
     """
-    def __init__(self, features: List[Feature]):
+    def __init__(self, features: list[Feature]):
         self.features = features
 
     def add_feature(self, feature: Feature) -> None:

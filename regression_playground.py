@@ -1,13 +1,12 @@
 from gaussians import InteractiveGaussian
 from features import *
-import numpy as np
 import matplotlib.pyplot as plt
 from feature_controls import FeatureVectorController
 from config import load_config, Config
 from learning import InteractiveTrainer
 
 
-def start_regression():
+def start_regression() -> None:
     """
     Starts the regression session.
     Creates noisy samples from the default function, creates the plot axes and connects events to

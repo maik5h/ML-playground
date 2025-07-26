@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, Slider
 from gaussians import InteractiveGaussian
 from features import Feature, PolynomialFeature, SineFeature, CosineFeature
-from typing import List, Union, Literal
+from typing import Union, Literal, Optional, Callable, Sequence
 
 
 # The maximum number of features that the FeatureVector class can hold.
@@ -11,7 +11,7 @@ MAX_NUMBER_FEATURES = 12
 # The distance relative to the full figure in which buttons are spaced in y-direction.
 Y_SPACING = 0.06
 
-def pos(element: Literal['button', 'controller'], row: int):
+def pos(element: Literal['button', 'controller'], row: int) -> tuple[float, float, float, float]:
     """
     Returns the position of an element as a list in XYWH notation.
     Elements are arranged in rows, spaced by Y_SPACING. Buttons are positioned above
@@ -33,21 +33,24 @@ def pos(element: Literal['button', 'controller'], row: int):
 
     row_offset = 3 if element == 'controller' else 0
 
-    return [x, y - (row + row_offset) * Y_SPACING, w, h]
+    return (x, y - (row + row_offset) * Y_SPACING, w, h)
 
-def create_button(pos: List[float], label: str, on_clicked: callable = None, target_list: List[Button] = None) -> Button:
+def create_button(pos: tuple[float, float, float, float],
+                  label: str,
+                  on_clicked: Optional[Callable] = None,
+                  target_list: Optional[list[Button]] = None) -> Button:
     """
     Creates a button with the specified attributes and adds it to the target_list. Returns the new button.
 
-    Attributes
+    Parameters
     ----------
-    pos: `List[float]`
+    pos: `tuple[float, float, float, float]`
         Button position relative to full figure in XYWH notation.
     label: `str`
         Button label as string.
-    on_clicked: `callable`
+    on_clicked: `Optional[Callable]`
         The function to call when button is clicked.
-    target_list: `List[Button]`
+    target_list: `Optional[list[Button]]`
         A list this button is added to.
     """
     button_ax = plt.axes(pos)
@@ -59,7 +62,7 @@ def create_button(pos: List[float], label: str, on_clicked: callable = None, tar
 
     return button
 
-def hide_widget(widget: Union[Button, Slider], callback_id: int = None) -> None:
+def hide_widget(widget: Union[Button, Slider], callback_id: Optional[int] = None) -> None:
     """
     Hides the given widget and takes care that no inputs are accepted while it is hidden.
 
@@ -67,7 +70,7 @@ def hide_widget(widget: Union[Button, Slider], callback_id: int = None) -> None:
     ----------
     widget: `Union[Button, Slider]`
         The widget to be hidden, can be a Button or a Slider.
-    callback_id: `int`
+    callback_id: `Optional[int]`
         id of the function connected to this instance. Can be None if no function has been connected.
     """
     if callback_id is not None:
@@ -84,13 +87,13 @@ class FeatureController:
     It consists of a label displaying the function definition of the feature ("$\phi_i(x)=...$"),
     a slider to set the function parameter of the feature and a button to disable the feature.
     """
-    def __init__(self, parent_controller, position: List[float], idx: int):
+    def __init__(self, parent_controller, position: Sequence[float], idx: int):
         """
-        Attributes
+        Parameters
         ----------
         parent_controller: `FeatureVectorController`
             The parent FeatureVectorController instance that is holding this FeatureController.
-        position: `List[float]`
+        position: `Sequence[float]`
             Position of this FeatureController relative to the full figure in XYWH notation.
         idx: `int`
             Index of this FeatureController in the list of existing feature controllers.
@@ -122,7 +125,7 @@ class FeatureController:
 
         self.hide()
     
-    def set_position(self, new_position: List[float]) -> None:
+    def set_position(self, new_position: Sequence[float]) -> None:
         """
         Sets this FeatureController to the given new position by updating the axes of all members
         to fit into the new position.
@@ -181,12 +184,11 @@ class FeatureController:
         
         self._button_id = self._x_button.on_clicked(lambda event: self._parent_controller.remove_feature(self._idx))
     
-    def _on_slider_changed(self, val: float):
+    def _on_slider_changed(self, val: float) -> None:
         self._feature.parameter = int(val)
         self._parent_controller.gauss.update_feature_parameter()
         self._label.set_text(f'$\phi_{self._idx+1}(x) = {self._feature.get_expression()}$')
     
-
 class FeatureVectorController:
     """
     Controlls the feature vector of a given InteractiveGaussian.
@@ -200,10 +202,10 @@ class FeatureVectorController:
 
         self._number_active_features = 0
 
-        self._control_buttons: List[Button] = []
+        self._control_buttons: list[Button] = []
         self._create_control_buttons()
 
-        self._feature_controllers: List[FeatureController] = []
+        self._feature_controllers: list[FeatureController] = []
         for i in range(MAX_NUMBER_FEATURES):
             self._feature_controllers.append(FeatureController(self, pos('controller', row=i), idx=i))
 

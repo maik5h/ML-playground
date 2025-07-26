@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Button
 from matplotlib.animation import FuncAnimation
+from matplotlib.collections import PathCollection
+from matplotlib.backend_bases import KeyEvent
 from typing import Literal, Callable
 from config import Config
 from features import *
@@ -308,7 +309,7 @@ class InteractiveTrainer:
 
         self._ax.figure.canvas.draw_idle()
     
-    def _training_step(self, _frame):
+    def _training_step(self, _frame) -> tuple[PathCollection, PathCollection]:
         """
         Performs a single training step by explicitly drawing data using self._data_loader.__next__().
         Updates the target samples plot.
@@ -333,7 +334,7 @@ class InteractiveTrainer:
         if len(self._data_loader.get_remaining_values()[0]) == 0:
             self._anim.end()
 
-        return [self._collection_remaining, self._collection_used]
+        return (self._collection_remaining, self._collection_used)
 
     def _create_animation(self) -> FuncAnimation:
         self._data_loader.reset()
@@ -355,7 +356,7 @@ class InteractiveTrainer:
         self._data_loader.reset()
         self._plot_target_samples()
 
-    def on_key_press(self, event):
+    def on_key_press(self, event: KeyEvent) -> None:
         """
         Starts and stops the animated learning if the space bar has been pressed.
         """

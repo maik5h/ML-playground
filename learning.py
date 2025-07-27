@@ -38,9 +38,10 @@ def generate_target_samples(n_samples: int, noise_amount: float) -> tuple[np.arr
     """
     # Create a random target function using a FeatureVector.
     target_function = FeatureVector([])
-    n_features = np.random.randint(1, 5)
+    n_features = np.random.randint(1, 3)
     for _ in range(n_features):
-        parameter = np.random.randint(0, 4)
+        # Choose a parameter that lies within the available weight space.
+        parameter = np.random.randint(0, Config.weight_space_xlim[1]*0.8)
         feature_type = np.random.randint(0, len(available_features))
         target_function.add_feature(available_features[feature_type](parameter))
 

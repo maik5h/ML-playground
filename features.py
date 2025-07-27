@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.special import factorial
 from typing import SupportsIndex
 
 
@@ -24,7 +25,9 @@ class PolynomialFeature(Feature):
         super().__init__(power)
 
     def __call__(self, input: np.array) -> np.array:
-        return input ** self.parameter
+        # Scale the output with the inverse factorial of the power to prevent
+        # higher order terms to overwhelm lower order terms.
+        return input ** self.parameter / factorial(self.parameter)
     
     def get_expression(self) -> str:
         if self.parameter == 0:

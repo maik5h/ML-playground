@@ -117,8 +117,6 @@ class Gaussian:
             self.mu += self.sigma @ phi @ sc.linalg.cho_solve(fac, (Y - phi.T @ self.mu))
             self.sigma -= self.sigma @ phi @ sc.linalg.cho_solve(fac, phi.T @ self.sigma)
 
-
-
 class InteractiveGaussian(Gaussian):
     """
     Extends the Gaussian class by methods to plot the distribution and update parameters based on matplotlib callbacks.
@@ -279,24 +277,31 @@ class InteractiveGaussian(Gaussian):
         rm_idx: `int`
             The index of the feature and weight to be removed.
         """
-        # To update the currently displayed weights, two cases have to be considered:
-        # If a feature has been removed, all following features shift by one in the list. Make sure the
+        # If a feature is removed, all following features shift by one in the list. Make sure the
         # displayed features dont change when it happens.
-        for i in (0, 1):
-            # Reduce index by one if needed or jump to last value if element 0 was removed.
-            if self._active_idx[i] >= rm_idx:
-                if self._active_idx[i] == 0:
-                    self._active_idx[i] = len(self.phi) - 2
-                else:
-                    self._active_idx[i] -= 1
+        # To correctly update the currently displayed weights, find the weights that do not change.
+        keep_index = (self._active_idx[0] < rm_idx, self._active_idx[1] < rm_idx)
+
+        # If both indices change, offset both by one.
+        if not keep_index[0] and not keep_index[1]:
+            self._active_idx[0] -= 1
+            self._active_idx[1] -= 1
         
-        # If the last feature in the list was displayed and has been removed, set the corresponding
-        # active index to 0 or 1 if 0 is occupied.
-        if rm_idx == len(self.phi) - 1:
-            if self._active_idx[0] == rm_idx:
-                self._active_idx[0] = 0 if not self._active_idx[1] == 0 else 1
-            elif self._active_idx[1] == rm_idx:
-                self._active_idx[1] = 0 if not self._active_idx[0] == 0 else 1
+        # If only one changes, move it but skip the other active index, if it occupies the next available
+        # slot.
+        elif not (keep_index[0] and keep_index[1]):
+            if keep_index[0]:
+                offset = 2 if self._active_idx[0] == self._active_idx[1] - 1 else 1
+                self._active_idx[1] -= offset
+
+            if keep_index[1]:
+                offset = 2 if self._active_idx[1] == self._active_idx[0] - 1 else 1
+                self._active_idx[0] -= offset
+        
+        # Take care of negative indices.
+        for i in (0, 1):
+            if self._active_idx[i] < 0:
+                self._active_idx[i] += len(self.phi) - 1
 
         # Remove dimension from parent Gaussian.
         self.remove_random_variable(rm_idx)

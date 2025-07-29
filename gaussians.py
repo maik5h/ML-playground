@@ -246,11 +246,11 @@ class InteractiveGaussian(Gaussian):
         self._features = self.phi(self._func_samples_x)
 
         x_idx = self._active_idx[0]
-        x_button_label = f'$w_{x_idx+1} (\phi_{x_idx+1}={self.phi[x_idx].get_expression()})$'
+        x_button_label = f'$w_{x_idx+1} ({self.phi[x_idx].get_expression()})$'
         self._weight_x_button.label.set_text(x_button_label)
 
         y_idx = self._active_idx[1]
-        y_button_label = f'$w_{y_idx+1} (\phi_{y_idx+1}={self.phi[y_idx].get_expression()})$'
+        y_button_label = f'$w_{y_idx+1} ({self.phi[y_idx].get_expression()})$'
         self._weight_y_button.label.set_text(y_button_label)
 
     def add_feature(self, feature: Feature) -> None:
@@ -380,7 +380,6 @@ class InteractiveGaussian(Gaussian):
 
         initialize == False:    Updates only the data of the existing plot.
         """
-        
         active_mu, active_sigma = self.select_random_variables(self._active_idx)
         weight_density = multivariate_normal.pdf(self._weight_samples, active_mu, active_sigma)
 
@@ -451,7 +450,7 @@ class InteractiveGaussian(Gaussian):
         
         # Update the button label.
         n = self._active_idx[idx]
-        label = f'$w_{n+1} (\phi_{n+1}={self.phi[n].get_expression()})$'
+        label = f'$w_{n+1} ({self.phi[n].get_expression()})$'
         if idx == 0:
             self._weight_x_button.label.set_text(label)
         elif idx == 1:

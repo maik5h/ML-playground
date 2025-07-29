@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, Slider
 from gaussians import InteractiveGaussian
-from features import Feature, PolynomialFeature, SineFeature, CosineFeature
+from features import Feature, PolynomialFeature, HarmonicFeature
 from typing import Union, Literal, Optional, Callable, Sequence
 
 
@@ -9,7 +9,7 @@ from typing import Union, Literal, Optional, Callable, Sequence
 MAX_NUMBER_FEATURES = 12
 
 # The distance relative to the full figure in which buttons are spaced in y-direction.
-Y_SPACING = 0.06
+Y_SPACING = 0.09
 
 def pos(element: Literal['button', 'controller'], row: int) -> tuple[float, float, float, float]:
     """
@@ -29,9 +29,9 @@ def pos(element: Literal['button', 'controller'], row: int) -> tuple[float, floa
     x = 0.02
     y = 0.85
     w = 0.2
-    h = 0.05
+    h = 0.08
 
-    row_offset = 3 if element == 'controller' else 0
+    row_offset = 2 if element == 'controller' else 0
 
     return (x, y - (row + row_offset) * Y_SPACING, w, h)
 
@@ -108,12 +108,14 @@ class FeatureController:
         # Initialize required axes with arbitrary values and set correct values via
         # self.set_position later.
         ax_label    = plt.axes([0, 0, 1, 1])
-        ax_slider   = plt.axes([0, 0, 1, 1])
+        ax_slider_a = plt.axes([0, 0, 1, 1])
+        ax_slider_b = plt.axes([0, 0, 1, 1])
         ax_button   = plt.axes([0, 0, 1, 1])
 
         ax_label.axis('off')
 
-        self._slider     = Slider(ax_slider, '', valmin=0, valmax=4, valinit=0, valstep=1, handle_style={'size': 5})
+        self._slider_a   = Slider(ax_slider_a, '', valmin=0, valmax=4, valinit=0, valstep=1, handle_style={'size': 5})
+        self._slider_b   = Slider(ax_slider_b, '', valmin=-4, valmax=4, valinit=0, valstep=1, handle_style={'size': 5})
         self._label      = ax_label.text(0, 0, '', verticalalignment='top')
         self._x_button   = Button(ax_button, 'X', color='#DF908F', hovercolor='#F5BDBC')
 
@@ -135,8 +137,9 @@ class FeatureController:
         width   = new_position[2]
         height  = new_position[3]
 
-        self._label.axes.set_position([x, y + height, 0.6*width, 0.5*height])
-        self._slider.ax.set_position([x, y, 0.75*width, 0.5*height])
+        self._label.axes.set_position([x, y + height, 0.6*width, 0.3*height])
+        self._slider_a.ax.set_position([x, y + 0.35*height, 0.75*width, 0.3*height])
+        self._slider_b.ax.set_position([x, y, 0.75*width, 0.3*height])
         self._x_button.ax.set_position([x + 0.85*width, y, 0.15*width, height])
     
     def set_idx(self, new_idx: int) -> None:
@@ -153,7 +156,8 @@ class FeatureController:
         and x_button.
         """
         self._label.axes.set_visible(False)
-        hide_widget(self._slider, self._slider_id)
+        hide_widget(self._slider_a, self._slider_id)
+        hide_widget(self._slider_b, self._slider_id)
         hide_widget(self._x_button, self._button_id)
 
         self._feature = None
@@ -167,25 +171,33 @@ class FeatureController:
         self._feature = feature
 
         self._label.axes.set_visible(True)
-        self._slider.ax.set_visible(True)
+        self._slider_a.ax.set_visible(True)
+        self._slider_b.ax.set_visible(True)
         self._x_button.ax.set_visible(True)
 
         self._label.set_text(f'$\phi_{self._idx+1}(x) = {feature.get_expression()}$')
 
-        self._slider_id = self._slider.on_changed(self._on_slider_changed)
-        self._slider.set_val(feature.parameter)
+        self._slider_a_id = self._slider_a.on_changed(self._on_slider_a_changed)
+        self._slider_b_id = self._slider_b.on_changed(self._on_slider_b_changed)
+        self._slider_a.set_val(feature.parameter_a)
+        self._slider_b.set_val(feature.parameter_b)
 
         # A Frequency of zero is not supported, so slider min value must be set to 1
         # if feature is sine or cosine, i.e. not polynomial.
         if isinstance(feature, PolynomialFeature):
-            self._slider.valmin = 0
+            self._slider_a.valmin = 0
         else:
-            self._slider.valmin = 1
+            self._slider_a.valmin = 1
         
         self._button_id = self._x_button.on_clicked(lambda event: self._parent_controller.remove_feature(self._idx))
     
-    def _on_slider_changed(self, val: float) -> None:
-        self._feature.parameter = int(val)
+    def _on_slider_a_changed(self, val: float) -> None:
+        self._feature.parameter_a = int(val)
+        self._parent_controller.gauss.update_feature_parameter()
+        self._label.set_text(f'$\phi_{self._idx+1}(x) = {self._feature.get_expression()}$')
+    
+    def _on_slider_b_changed(self, val: float) -> None:
+        self._feature.parameter_b = int(val)
         self._parent_controller.gauss.update_feature_parameter()
         self._label.set_text(f'$\phi_{self._idx+1}(x) = {self._feature.get_expression()}$')
     
@@ -220,17 +232,12 @@ class FeatureVectorController:
         """
         create_button(pos           = pos('button', row=0),
                       label         = 'Add power feature',
-                      on_clicked    = lambda event: self.add_feature(PolynomialFeature(0)),
+                      on_clicked    = lambda event: self.add_feature(PolynomialFeature(0, 0)),
                       target_list   = self._control_buttons)
         
         create_button(pos           = pos('button', row=1),
-                      label         = 'Add sine feature',
-                      on_clicked    = lambda event: self.add_feature(SineFeature(1)),
-                      target_list   = self._control_buttons)
-
-        create_button(pos           = pos('button', row=2),
-                      label         = 'Add cosine feature',
-                      on_clicked    = lambda event: self.add_feature(CosineFeature(1)),
+                      label         = 'Add harmonic feature',
+                      on_clicked    = lambda event: self.add_feature(HarmonicFeature(1, 0)),
                       target_list   = self._control_buttons)
                 
     def add_feature(self, feature: Feature) -> None:

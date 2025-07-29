@@ -12,7 +12,7 @@ from time import sleep
 
 
 # Tuple of all Feature classes.
-available_features = (PolynomialFeature, SineFeature, CosineFeature)
+available_features = (PolynomialFeature, HarmonicFeature)
 
 # Tuple of all sampling orders.
 data_loader_sampling_orders = ['sequential', 'random', 'least likely']
@@ -41,9 +41,9 @@ def generate_target_samples(n_samples: int, noise_amount: float) -> tuple[np.arr
     n_features = np.random.randint(1, 3)
     for _ in range(n_features):
         # Choose a parameter that lies within the available weight space.
-        parameter = np.random.randint(0, Config.weight_space_xlim[1]*0.8)
+        parameter = np.random.randint(0, Config.weight_space_xlim[1]*0.8, size=2)
         feature_type = np.random.randint(0, len(available_features))
-        target_function.add_feature(available_features[feature_type](parameter))
+        target_function.add_feature(available_features[feature_type](*parameter))
 
     # Evaluate the target function at n_samples x positions. This returns an array with each
     # feature evaluated at x separately with shape=(n_samples, n_features).

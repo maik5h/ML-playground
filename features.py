@@ -1,15 +1,42 @@
 import numpy as np
 from scipy.special import factorial
 from typing import SupportsIndex
+import abc
 
 
-class Feature:
+class Feature(metaclass=abc.ABCMeta):
     """
-    Base class for Features.
+    Base class for features. All features are parameterized by two values, parameter_a and parameter_b.
+    The interpretation of these values is subject of the implementations of the subclasses, they may
+    for example denote exponent and x-offset of a polynomial term.
     """
-    def __init__(self, parameter: int):
-        self.parameter = parameter
+    @property
+    @abc.abstractmethod
+    def parameter_a(self):
+        """
+        Primary parameter, for example exponent or frequency.
+        """
+        pass
+
+    @property
+    @abc.abstractmethod
+    def parameter_b(self):
+        """
+        Secondary parameter, for example x-offset or phase.
+        """
+        pass
     
+    @parameter_a.setter
+    @abc.abstractmethod
+    def parameter_a(self, value):
+        pass
+
+    @parameter_b.setter
+    @abc.abstractmethod
+    def parameter_b(self, value):
+        pass
+    
+    @abc.abstractmethod
     def get_expression(self) -> str:
         """
         Returns the mathematical expression of this feature as a string, for example: 'x^2'.
@@ -18,62 +45,99 @@ class Feature:
 
 class PolynomialFeature(Feature):
     """
-    Polynomial feature with an integer power. The 'parameter' attribute of the Feature base class
-    is interpreted as the power.
+    Polynomial feature with an integer power. The 'parameter_a' attribute of the Feature base class
+    is interpreted as the power, 'parameter_b' is the x-offset.
     """
-    def __init__(self, power: int):
-        super().__init__(power)
+    def __init__(self, power: int, offset: int):
+        self._power = power
+        self._offset = offset
+
+    @property
+    def parameter_a(self) -> int:
+        return self._power
+
+    @property
+    def parameter_b(self) -> int:
+        return self._offset
+    
+    @parameter_a.setter
+    def parameter_a(self, value: int) -> None:
+        self._power = value
+
+    @parameter_b.setter
+    def parameter_b(self, value: int) -> None:
+        self._offset = value
 
     def __call__(self, input: np.array) -> np.array:
         # Scale the output with the inverse factorial of the power to prevent
         # higher order terms to overwhelm lower order terms.
-        return input ** self.parameter / factorial(self.parameter)
-    
+        return (input + self._offset) ** self._power / factorial(self._power)
+
     def get_expression(self) -> str:
-        if self.parameter == 0:
-            name = '1'
-        elif self.parameter == 1:
-            name = 'x'
+        # Turn the expression into a fancy string, i.e. only add parentheses and exponent if required
+        # and just return '1' if power is zero.
+        if self._power == 0:
+            return '1'
+        
+        offset_sign = '+' if self._offset > 0 else '-'
+
+        # Determine if offset is needed in string and if parentheses should be added.
+        if self._offset == 0:
+            base = 'x'
+        elif self._power == 1:
+            base = f'x {offset_sign} {abs(self._offset)}'
         else:
-            name = f'x^{self.parameter}'
+            base = f'(x {offset_sign} {abs(self._offset)})'
+        
+        # Add exponent if necessary.
+        if self._power == 1:
+            name = base
+        else:
+            name = f'{base}^{self._power}'
 
         return name
 
-class SineFeature(Feature):
+class HarmonicFeature(Feature):
     """
-    Sine feature with frequency of a natural multiple of pi. The 'parameter' attribute of the
-    Feature base class is interpreted as half of the frequency.
+    Harmonic feature with frequency of a natural multiple of pi. The 'parameter_a' attribute of the
+    Feature base class is interpreted as half of the frequency, 'parameter_b' is the x_offset.
     """
-    def __init__(self, n_pi: int):
-        super().__init__(n_pi)
+    def __init__(self, frequency: int, phase: int):
+        self._frequency = frequency
+        self._phase = phase
+
+    @property
+    def parameter_a(self) -> int:
+        return self._frequency
+
+    @property
+    def parameter_b(self) -> int:
+        return self._phase
+    
+    @parameter_a.setter
+    def parameter_a(self, value: int) -> None:
+        self._frequency = value
+
+    @parameter_b.setter
+    def parameter_b(self, value: int) -> None:
+        self._phase = value
 
     def __call__(self, input: np.array) -> np.array:
-        return np.sin(self.parameter * np.pi * input)
+        return np.sin(self._frequency * np.pi * input - self._phase / 2 * np.pi)
     
     def get_expression(self) -> str:
-        if self.parameter == 1:
-            name = '\sin(\pi x)'
+        # Determine the sign of the phase and create tuple of possible phases.
+        sign = '+' if self._phase > 0 else '-'
+        phase_strings = ('', f' {sign} \pi/2', f' {sign} \pi', f' {sign} 3\pi/2')
+
+        # Select the correct string corresponding to the phase.
+        phase_string = phase_strings[abs(self._phase) % 4]
+
+        # Add the frequency if needed.
+        if self._frequency == 1:
+            name = f'\sin(\pi x{phase_string})'
         else:
-            name = f'\sin({self.parameter}\pi x)'
-
-        return name
-
-class CosineFeature(Feature):
-    """
-    Cosine feature with frequency of a natural multiple of pi. The 'parameter' attribute of
-    the Feature base class is interpreted as half of the frequency.
-    """
-    def __init__(self, n_pi: int):
-        super().__init__(n_pi)
-
-    def __call__(self, input: np.array) -> np.array:
-        return np.cos(self.parameter * np.pi * input)
-    
-    def get_expression(self) -> str:
-        if self.parameter == 1:
-            name = '\cos(\pi x)'
-        else:
-            name = f'\cos({self.parameter}\pi x)'
+            name = f'\sin({self._frequency}\pi x{phase_string})'
 
         return name
 

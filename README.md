@@ -21,13 +21,12 @@ f(x) &= w_1 \cdot \phi_1(x) + w_2 \cdot \phi_2(x) + ...\\
 &= \phi w
 \end{align}
 ```
-from predefined $\phi(x; n)$:
+from predefined $\phi(x; p_1, p_2)$:
 
-- Polynomial: $\phi(x; n) = x^n $
-- Sine: $\phi(x; n) = \sin(n\pi \cdot x)$
-- Cosine: $\phi(x; n) = \cos(n\pi \cdot x)$
+- Polynomial: $\phi(x; p_1, p_2) = (x - p_2)^{p_1} $
+- Harmonic: $\phi(x; p_1, p_2) = \sin(p_1\pi \cdot x + p_2\dfrac{\pi}{2})$
 
-The parameters $n$ are set using the sliders next to the feature label. The weights $w$ are Gaussian random variables (RVs). Their probability density is shown in the left plot of the figure. By choosing RVs as the coefficients in a parametric function, the function output itself becomes an RV! The distribution over function values $f(x)$ is shown on the right plot.
+The parameters $p_i$ are set using the sliders next to the feature label. The weights $w$ are Gaussian random variables (RVs). Their probability density is shown in the left plot of the figure. By choosing RVs as the coefficients in a parametric function, the function output itself becomes an RV! The distribution over function values $f(x)$ is shown on the right plot.
 
 ### Edit the weight distribution
 As it is difficult to visualize high dimensional distributions, only a two dimensional subset of the actual weight space is displayed in the left plot. If the model consists of more than two weights, the displayed weights can be changed by clicking on the x or y label of the plot.\

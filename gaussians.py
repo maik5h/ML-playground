@@ -333,35 +333,26 @@ class InteractiveGaussian(Gaussian):
             direction[0] == True: scale along self._active_idx[0]
             direction[1] == True: scale along self._active_idx[1]
         """
-        # Define a 2D scaling matrix that scales only the directions set to True.
-        scale = np.array(((factor if direction[0] else 1, 0),
-                          (0, factor if direction[1] else 1)))
+        # Define a scaling matrix that scales the active weights only in the directions set to True.
+        scale = np.eye(len(self.phi))
+        i, j = self._active_idx[0], self._active_idx[1]
+        scale[[i, j], [i, j]] = [factor if direction[0] else 1, factor if direction[1] else 1]
 
-        # Select currently displayed random variables and apply the scaling matrix to their sigma.
-        _, sigma = self.select_random_variables(self._active_idx)
-        sigma = scale @ sigma @ scale.T
-
-        # Copy scaled sigma values back into self.sigma.
-        for i in (0, 1):
-            for j in (0, 1):
-                self.sigma[self._active_idx[i], self._active_idx[j]] = sigma[i, j]
-            
+        self.sigma = scale @ self.sigma @ scale.T
+        
         self.plot()
     
     def _rotate_sigma(self, angle: float) -> None:
         """
         Rotates the pdf with respect to the currently displayed random variables around their mean
         """
-        rot = np.array(((np.cos(angle), -np.sin(angle)), (np.sin(angle), np.cos(angle))))
+        # Create unity matrix and insert rotation matrix at concerned indices.
+        rot = np.eye(len(self.phi))
+        c, s = np.cos(angle), np.sin(angle)
+        i, j = self._active_idx[0], self._active_idx[1]
+        rot[[i, i, j, j], [i, j, i, j]] = [c, -s, s, c]
 
-        # Select currently displayed random variables and apply rotation matrix to their sigma.
-        _, sigma = self.select_random_variables(self._active_idx)
-        sigma = rot @ sigma @ rot.T
-
-        # Copy rotated sigma values back into self.sigma.
-        for i in (0, 1):
-            for j in (0, 1):
-                self.sigma[self._active_idx[i], self._active_idx[j]] = sigma[i, j]
+        self.sigma = rot @ self.sigma @ rot.T
         
         self.plot()
     
@@ -389,6 +380,7 @@ class InteractiveGaussian(Gaussian):
 
         initialize == False:    Updates only the data of the existing plot.
         """
+        
         active_mu, active_sigma = self.select_random_variables(self._active_idx)
         weight_density = multivariate_normal.pdf(self._weight_samples, active_mu, active_sigma)
 

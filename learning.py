@@ -4,6 +4,7 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.collections import PathCollection
 from matplotlib.backend_bases import KeyEvent
 from typing import Literal, Callable
+from numpy.typing import NDArray
 from config import Config
 from features import *
 from feature_controls import create_button
@@ -17,7 +18,7 @@ available_features = (PolynomialFeature, HarmonicFeature, GaussFeature)
 # Tuple of all sampling orders.
 data_loader_sampling_orders = ['sequential', 'random', 'least likely']
 
-def generate_target_samples(n_samples: int, noise_amount: float) -> tuple[np.array, np.array]:
+def generate_target_samples(n_samples: int, noise_amount: float) -> tuple[NDArray, NDArray]:
     """
     Generates a randomized selection of samples.
 
@@ -66,9 +67,9 @@ class DataLoader:
     Attributes
     ----------
 
-    x_data: `np.array`
+    x_data: `NDArray`
         Array of x data points.
-    y_data: `np.array`
+    y_data: `NDArray`
         Array of y data points.
     order: `Literal['sequential', 'random', 'least likely']`
         The order in which the datapoints are returned.
@@ -76,7 +77,7 @@ class DataLoader:
         - 'random': returns datapoints in random order.
         - 'least likely': TODO return the point which is the least likely given the current model prediction.
     """
-    def __init__(self, x_data: np.array, y_data: np.array, order: Literal['sequential', 'random', 'least likely'], batch_size: int = 1):
+    def __init__(self, x_data: NDArray, y_data: NDArray, order: Literal['sequential', 'random', 'least likely'], batch_size: int = 1):
         self.x_data = x_data
         self.y_data = y_data
         self._order = order
@@ -91,7 +92,7 @@ class DataLoader:
         self._order = order
         self.reset()
     
-    def set_data(self, x_data: np.array, y_data: np.array) -> None:
+    def set_data(self, x_data: NDArray, y_data: NDArray) -> None:
         """
         Sets the x and y data to the input data and resets internal state.
         """
@@ -99,13 +100,13 @@ class DataLoader:
         self.y_data = y_data
         self.reset()
     
-    def get_used_values(self) -> tuple[np.array, np.array]:
+    def get_used_values(self) -> tuple[NDArray, NDArray]:
         """
         Returns all x and y values that have already been returned by __next__.
         """
         return self.x_data[self._used_indices], self.y_data[self._used_indices]
 
-    def get_remaining_values(self) -> tuple[np.array, np.array]:
+    def get_remaining_values(self) -> tuple[NDArray, NDArray]:
         """
         Returns the values that have not been returned by __next__.
         """

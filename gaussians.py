@@ -5,12 +5,13 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 from scipy.stats import multivariate_normal
 from typing import Union, Literal
+from numpy.typing import NDArray
 from logging import warning
 from config import Config
 import scipy as sc
 
 
-def get_gaussian(x: np.array, mu: np.array, sigma: np.array) -> Union[float, np.array]:
+def get_gaussian(x: NDArray, mu: NDArray, sigma: NDArray) -> Union[float, NDArray]:
     """
     Returns the value of a Gaussian function with mean mu and standard deviation sigma at value x.
     """
@@ -23,11 +24,11 @@ class Gaussian:
     Class representing multivariate Gaussian distributions.
     The probability density is Gaussian and characterized by the mean vector mu and the covariance matrix sigma.
     """
-    def __init__(self, mu: np.array, sigma: np.array):
+    def __init__(self, mu: NDArray, sigma: NDArray):
         self.mu = mu
         self.sigma = sigma
     
-    def project(self, A: np.array):
+    def project(self, A: NDArray):
         """
         Applies the projection A to this distribution and returns a new Gaussian with corresponding mu and sigma.
         """
@@ -63,7 +64,7 @@ class Gaussian:
         self.sigma = np.delete(self.sigma, idx, axis=0)
         self.sigma = np.delete(self.sigma, idx, axis=1)
     
-    def select_random_variables(self, indices: tuple[int, int]) -> tuple[np.array, np.array]:
+    def select_random_variables(self, indices: tuple[int, int]) -> tuple[NDArray, NDArray]:
         """
         Selects the random variables at the input indices by marginalizing out all other variables.
         Returns the corresponding mean vector mu and covariance matrix sigma.
@@ -95,7 +96,7 @@ class Gaussian:
 
         return mu, sigma
 
-    def condition(self, phi: np.array, Y: np.array, sigma: np.array) -> None:
+    def condition(self, phi: NDArray, Y: NDArray, sigma: NDArray) -> None:
         """
         Updates this Gaussian to represent the conditional probability given a linear transformation phi,
         data Y and the noise amount on the data sigma.
@@ -149,7 +150,7 @@ class InteractiveGaussian(Gaussian):
 
         # Phi is a FeatureVector, features is phi evaluated at Config.function_space_samples x-positions.
         self.phi: FeatureVector = None
-        self._features: np.array = None
+        self._features: NDArray = None
 
         # References to plots used to replace the data instead of replotting on every change.
         self._weight_plot = None

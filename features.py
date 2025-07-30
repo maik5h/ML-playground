@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.special import factorial
 from typing import SupportsIndex
+from numpy.typing import NDArray
 import abc
 
 
@@ -68,7 +69,7 @@ class PolynomialFeature(Feature):
     def parameter_b(self, value: int) -> None:
         self._offset = value
 
-    def __call__(self, input: np.array) -> np.array:
+    def __call__(self, input: NDArray) -> NDArray:
         # Scale the output with the inverse factorial of the power to prevent
         # higher order terms to overwhelm lower order terms.
         return (input + self._offset) ** self._power / factorial(self._power)
@@ -122,7 +123,7 @@ class HarmonicFeature(Feature):
     def parameter_b(self, value: int) -> None:
         self._phase = value
 
-    def __call__(self, input: np.array) -> np.array:
+    def __call__(self, input: NDArray) -> NDArray:
         return np.sin(self._frequency * np.pi * input - self._phase / 2 * np.pi)
     
     def get_expression(self) -> str:
@@ -166,7 +167,7 @@ class GaussFeature(Feature):
     def parameter_b(self, value: int) -> None:
         self._mu = value
 
-    def __call__(self, input: np.array) -> np.array:
+    def __call__(self, input: NDArray) -> NDArray:
         coeff = 1 / (np.sqrt(2 * np.pi) * self._sigma / 5)
         exponent = -0.5 * ((input - self._mu) / self._sigma * 5) ** 2
         return coeff * np.exp(exponent)
@@ -188,7 +189,7 @@ class FeatureVector:
     def remove_feature(self, idx: int) -> None:
         self.features.pop(idx)
 
-    def __call__(self, input: np.array) -> np.array:
+    def __call__(self, input: NDArray) -> NDArray:
         """
         Forwards the input to all features and returns the stacked outputs [phi_1(x), phi_2(x), ...].T.
         """

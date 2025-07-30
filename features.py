@@ -141,6 +141,39 @@ class HarmonicFeature(Feature):
 
         return name
 
+class GaussFeature(Feature):
+    """
+    Gaussian feature with frequency of a natural multiple of pi. The 'parameter_a' attribute of the
+    Feature base class is interpreted as the variance of the curve, 'parameter_b' is the mean.
+    """
+    def __init__(self, sigma: int, mu: int):
+        self._sigma = sigma
+        self._mu = mu
+
+    @property
+    def parameter_a(self) -> int:
+        return self._sigma
+
+    @property
+    def parameter_b(self) -> int:
+        return self._mu
+
+    @parameter_a.setter
+    def parameter_a(self, value: int) -> None:
+        self._sigma = value
+
+    @parameter_b.setter
+    def parameter_b(self, value: int) -> None:
+        self._mu = value
+
+    def __call__(self, input: np.array) -> np.array:
+        coeff = 1 / (np.sqrt(2 * np.pi) * self._sigma / 5)
+        exponent = -0.5 * ((input - self._mu) / self._sigma * 5) ** 2
+        return coeff * np.exp(exponent)
+
+    def get_expression(self) -> str:
+        return r'\varphi_{' + f'\mu={self._mu}, \sigma={(self._sigma / 5):.1f}' + '}(x)'
+
 class FeatureVector:
     """
     Class to store multiple features. When forwarded an input array of x-values, returns a stack of the features

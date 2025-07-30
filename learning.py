@@ -12,7 +12,7 @@ from time import sleep
 
 
 # Tuple of all Feature classes.
-available_features = (PolynomialFeature, HarmonicFeature)
+available_features = (PolynomialFeature, HarmonicFeature, GaussFeature)
 
 # Tuple of all sampling orders.
 data_loader_sampling_orders = ['sequential', 'random', 'least likely']

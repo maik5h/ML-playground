@@ -214,8 +214,8 @@ class InteractiveGaussian(Gaussian):
 
         # The width of both buttons is determined from the width of the axis, for the x_button y-position
         # an arbitrary value of 10% of the lower axis y-position has been chosen.
-        x_button_width = (pos.x1 - pos.x0) / 3
-        x_button_height = 0.4 * x_button_width
+        x_button_width = (pos.x1 - pos.x0) / 2
+        x_button_height = 0.25 * x_button_width
         x_button_ax = plt.axes(((pos.x0 + pos.x1 - x_button_width) / 2,
                                 pos.y0 * 0.1,
                                 x_button_width,

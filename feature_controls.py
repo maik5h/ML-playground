@@ -1,12 +1,12 @@
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, Slider
 from gaussians import InteractiveGaussian
-from features import Feature, PolynomialFeature, HarmonicFeature
+from features import Feature, PolynomialFeature, HarmonicFeature, GaussFeature
 from typing import Union, Literal, Optional, Callable, Sequence
 
 
 # The maximum number of features that the FeatureVector class can hold.
-MAX_NUMBER_FEATURES = 12
+MAX_NUMBER_FEATURES = 7
 
 # The distance relative to the full figure in which buttons are spaced in y-direction.
 Y_SPACING = 0.09
@@ -24,14 +24,14 @@ def pos(element: Literal['button', 'controller'], row: int) -> tuple[float, floa
     element: `Literal['button', 'controller']`
         The type of element. Buttons are on top, controllers below.
     row: `int`
-        The desired row index of the element. 
+        The desired row index of the element.
     """
     x = 0.02
     y = 0.85
     w = 0.2
     h = 0.08
 
-    row_offset = 2 if element == 'controller' else 0
+    row_offset = 3 if element == 'controller' else 0
 
     return (x, y - (row + row_offset) * Y_SPACING, w, h)
 
@@ -195,7 +195,7 @@ class FeatureController:
         self._feature.parameter_a = int(val)
         self._parent_controller.gauss.update_feature_parameter()
         self._label.set_text(f'$\phi_{self._idx+1}(x) = {self._feature.get_expression()}$')
-    
+
     def _on_slider_b_changed(self, val: float) -> None:
         self._feature.parameter_b = int(val)
         self._parent_controller.gauss.update_feature_parameter()
@@ -238,6 +238,11 @@ class FeatureVectorController:
         create_button(pos           = pos('button', row=1),
                       label         = 'Add harmonic feature',
                       on_clicked    = lambda event: self.add_feature(HarmonicFeature(1, 0)),
+                      target_list   = self._control_buttons)
+
+        create_button(pos           = pos('button', row=2),
+                      label         = 'Add Gauss feature',
+                      on_clicked    = lambda event: self.add_feature(GaussFeature(1, 0)),
                       target_list   = self._control_buttons)
                 
     def add_feature(self, feature: Feature) -> None:

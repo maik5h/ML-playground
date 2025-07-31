@@ -371,7 +371,6 @@ class InteractiveGaussian(Gaussian):
 
         self.plot()
 
-
     def _plot_weight_distribution(self, initialize: bool = False) -> None:
         """
         Plot the weight distribution to self._ax_weight.
@@ -435,6 +434,20 @@ class InteractiveGaussian(Gaussian):
         """
         self._plot_weight_distribution()
         self._plot_function_distribution()
+
+    def get_likelihood(self, x_data: NDArray, y_data: NDArray) -> NDArray:
+        """
+        Returns the likelihood to draw a sample y at position x in function space.
+        """
+        # Sample features at x_data.
+        features = self.phi(x_data)
+
+        # y data follows Gaussian distributions with own mu and sigma for every x value.
+        mu = features @ self.mu
+        sigma = np.sum(features.T * (self.sigma @ features.T), axis=0)
+
+        likelihood = get_gaussian(y_data, mu, sigma)
+        return likelihood
     
     def _cycle_displayed_weight(self, axis: Literal['x', 'y']) -> None:
         """

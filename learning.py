@@ -85,9 +85,11 @@ class DataLoader:
         - 'random': returns datapoints in random order.
         - 'least likely': TODO return the point which is the least likely given the current model prediction.
     """
-    def __init__(self, x_data: NDArray, y_data: NDArray, order: Literal['sequential', 'random', 'least likely'], batch_size: int = 1):
+    def __init__(self, x_data: NDArray, y_data: NDArray, model: InteractiveGaussian,
+                 order: Literal['sequential', 'random', 'least likely'],batch_size: int = 1):
         self.x_data = x_data
         self.y_data = y_data
+        self._model = model
         self._order = order
         self.batch_size = batch_size
         self._used_indices = []
@@ -160,7 +162,24 @@ class DataLoader:
             return x, y
         
         elif self._order == 'least likely':
-            raise NotImplementedError
+            likelihood = self._model.get_likelihood(self.x_data[self._remaining_indices],
+                                                    self.y_data[self._remaining_indices])
+
+            # Created indexed array and sort it to find indices of lowest likelihood.
+            likelihood = np.stack((likelihood, np.arange(len(likelihood)))).T
+            likelihood = sorted(likelihood, key=lambda element: element[0])
+            likelihood = np.array(likelihood)[:, 1].astype(np.int32)
+
+            x = self.x_data[self._remaining_indices[likelihood[:self.batch_size]]]
+            y = self.y_data[self._remaining_indices[likelihood[:self.batch_size]]]
+
+            self._used_indices.extend(self._remaining_indices[likelihood[:self.batch_size]])
+            if len(self._remaining_indices) >= self.batch_size:
+                self._remaining_indices = np.delete(self._remaining_indices, likelihood[:self.batch_size])
+            else:
+                self._remaining_indices = []
+
+            return x, y
 
     def __len__(self) -> int:
         return len(self.x_data)
@@ -233,7 +252,7 @@ class InteractiveTrainer:
             The axis to plot the target samples to.
         """
         self.gaussian: InteractiveGaussian = gaussian
-        self._data_loader: DataLoader = DataLoader([], [], 'sequential')
+        self._data_loader: DataLoader = DataLoader([], [], self.gaussian, 'sequential')
         self._fig = fig
         self._ax = ax
 

@@ -108,16 +108,21 @@ class FeatureController:
         # Initialize required axes with arbitrary values and set correct values via
         # self.set_position later.
         ax_label    = plt.axes([0, 0, 1, 1])
-        ax_slider_a = plt.axes([0, 0, 1, 1])
-        ax_slider_b = plt.axes([0, 0, 1, 1])
-        ax_button   = plt.axes([0, 0, 1, 1])
+        self._ax_slider_a = plt.axes([0, 0, 1, 1])
+        self._ax_slider_b = plt.axes([0, 0, 1, 1])
+        self._ax_button   = plt.axes([0, 0, 1, 1])
 
         ax_label.axis('off')
 
-        self._slider_a   = Slider(ax_slider_a, '', valmin=0, valmax=4, valinit=0, valstep=1, handle_style={'size': 5})
-        self._slider_b   = Slider(ax_slider_b, '', valmin=-4, valmax=4, valinit=0, valstep=1, handle_style={'size': 5})
+        # Initialize label and Buttons. Label text can be changed during runtime, Button does not have to be
+        # changed at all.
         self._label      = ax_label.text(0, 0, '', verticalalignment='top')
-        self._x_button   = Button(ax_button, 'X', color='#DF908F', hovercolor='#F5BDBC')
+        self._x_button   = Button(self._ax_button, 'X', color='#DF908F', hovercolor='#F5BDBC')
+
+        # Do not initialize sliders, as they are specific to the feature that is displayed and can not be
+        # edited during runtime. They are initialized in self.set_feature(...).
+        self._slider_a: Slider = None
+        self._slider_b: Slider = None
 
         self.set_position(position)
 
@@ -125,7 +130,11 @@ class FeatureController:
         self._slider_id: int = None
         self._button_id: int = None
 
-        self.hide()
+        # Hide widgets by default and only display when needed.
+        self._label.axes.set_visible(False)
+        self._ax_slider_a.set_visible(False)
+        self._ax_slider_b.set_visible(False)
+        hide_widget(self._x_button, self._button_id)
     
     def set_position(self, new_position: Sequence[float]) -> None:
         """
@@ -138,9 +147,9 @@ class FeatureController:
         height  = new_position[3]
 
         self._label.axes.set_position([x, y + height, 0.6*width, 0.3*height])
-        self._slider_a.ax.set_position([x, y + 0.35*height, 0.75*width, 0.3*height])
-        self._slider_b.ax.set_position([x, y, 0.75*width, 0.3*height])
-        self._x_button.ax.set_position([x + 0.85*width, y, 0.15*width, height])
+        self._ax_slider_a.set_position([x, y + 0.35*height, 0.8*width, 0.3*height])
+        self._ax_slider_b.set_position([x, y, 0.8*width, 0.3*height])
+        self._ax_button.set_position([x + 0.85*width, y, 0.15*width, height])
     
     def set_idx(self, new_idx: int) -> None:
         """
@@ -171,33 +180,55 @@ class FeatureController:
         self._feature = feature
 
         self._label.axes.set_visible(True)
-        self._slider_a.ax.set_visible(True)
-        self._slider_b.ax.set_visible(True)
+        self._ax_slider_a.set_visible(True)
+        self._ax_slider_b.set_visible(True)
         self._x_button.ax.set_visible(True)
 
         self._label.set_text(f'$\phi_{self._idx+1}(x) = {feature.get_expression()}$')
+
+        # Setting a feature creates new Slider objects. This requires clearing the axes or else remainders
+        # of the previous Sliders might be displayed.
+        self._refresh_axes()
+
+        min, max, step = feature.get_parameter_range('a')
+        self._slider_a = Slider(self._ax_slider_a, '', valmin=min, valmax=max,
+                                valinit=feature.parameter_a, valstep=step, handle_style={'size': 5})
+        self._slider_a.valtext.set_visible(False)
+
+        min, max, step = feature.get_parameter_range('b')
+        self._slider_b = Slider(self._ax_slider_b, '', valmin=min, valmax=max,
+                                valinit=feature.parameter_b, valstep=step, handle_style={'size': 5})
+        self._slider_b.valtext.set_visible(False)
 
         self._slider_a_id = self._slider_a.on_changed(self._on_slider_a_changed)
         self._slider_b_id = self._slider_b.on_changed(self._on_slider_b_changed)
         self._slider_a.set_val(feature.parameter_a)
         self._slider_b.set_val(feature.parameter_b)
-
-        # A Frequency of zero is not supported, so slider min value must be set to 1
-        # if feature is sine or cosine, i.e. not polynomial.
-        if isinstance(feature, PolynomialFeature):
-            self._slider_a.valmin = 0
-        else:
-            self._slider_a.valmin = 1
         
         self._button_id = self._x_button.on_clicked(lambda event: self._parent_controller.remove_feature(self._idx))
     
+    def _refresh_axes(self) -> None:
+        """
+        Removes the Slider axes and replaces them with new axes at the same position. Call to clear all
+        children to prevent leftover markers being displayed after creating new Sliders.
+        """
+        pos = self._ax_slider_a.get_position().get_points()
+        pos = (pos[0, 0], pos[0, 1], pos[1, 0] - pos[0, 0], pos[1, 1] - pos[0, 1])
+        self._ax_slider_a.remove()
+        self._ax_slider_a = plt.axes(pos)
+
+        pos = self._ax_slider_b.get_position().get_points()
+        pos = (pos[0, 0], pos[0, 1], pos[1, 0] - pos[0, 0], pos[1, 1] - pos[0, 1])
+        self._ax_slider_b.remove()
+        self._ax_slider_b = plt.axes(pos)
+
     def _on_slider_a_changed(self, val: float) -> None:
-        self._feature.parameter_a = int(val)
+        self._feature.parameter_a = val
         self._parent_controller.gauss.update_feature_parameter()
         self._label.set_text(f'$\phi_{self._idx+1}(x) = {self._feature.get_expression()}$')
 
     def _on_slider_b_changed(self, val: float) -> None:
-        self._feature.parameter_b = int(val)
+        self._feature.parameter_b = val
         self._parent_controller.gauss.update_feature_parameter()
         self._label.set_text(f'$\phi_{self._idx+1}(x) = {self._feature.get_expression()}$')
     
@@ -242,7 +273,7 @@ class FeatureVectorController:
 
         create_button(pos           = pos('button', row=2),
                       label         = 'Add Gauss feature',
-                      on_clicked    = lambda event: self.add_feature(GaussFeature(1, 0)),
+                      on_clicked    = lambda event: self.add_feature(GaussFeature(0.2, 0)),
                       target_list   = self._control_buttons)
                 
     def add_feature(self, feature: Feature) -> None:

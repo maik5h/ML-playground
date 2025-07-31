@@ -41,10 +41,18 @@ def generate_target_samples(n_samples: int, noise_amount: float) -> tuple[NDArra
     target_function = FeatureVector([])
     n_features = np.random.randint(1, 3)
     for _ in range(n_features):
-        # Choose a parameter that lies within the available weight space.
-        parameter = np.random.randint(0, Config.weight_space_xlim[1]*0.8, size=2)
         feature_type = np.random.randint(0, len(available_features))
-        target_function.add_feature(available_features[feature_type](*parameter))
+
+        # Choose a parameter that lies within the available weight space.
+        min, max, step = available_features[feature_type].get_parameter_range('a')
+        valid_parameters_a = np.arange(min, max, step)
+
+        min, max, step = available_features[feature_type].get_parameter_range('b')
+        valid_parameters_b = np.arange(min, max, step)
+
+        parameter_a = valid_parameters_a[np.random.randint(len(valid_parameters_a))]
+        parameter_b = valid_parameters_b[np.random.randint(len(valid_parameters_b))]
+        target_function.add_feature(available_features[feature_type](parameter_a, parameter_b))
 
     # Evaluate the target function at n_samples x positions. This returns an array with each
     # feature evaluated at x separately with shape=(n_samples, n_features).
@@ -52,8 +60,8 @@ def generate_target_samples(n_samples: int, noise_amount: float) -> tuple[NDArra
     x_samples = np.linspace(x_range[0], x_range[1], n_samples)
     y_features = target_function(x_samples)
 
-    # Create a weight for each feature and make sure all weights lie inside the plotted space.
-    weights = np.random.rand(n_features) * Config.weight_space_xlim[1]
+    # Create a weight for each feature and make sure all weights lie well inside the plotted space.
+    weights = np.random.rand(n_features) * Config.weight_space_xlim[1] * 1.6 - Config.weight_space_xlim[1] * 0.8
     y_samples = y_features @ weights
 
     y_samples += np.random.normal(0, scale=noise_amount, size=y_samples.shape)

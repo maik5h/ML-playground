@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.special import factorial
-from typing import SupportsIndex
+from typing import SupportsIndex, Literal
 from numpy.typing import NDArray
 import abc
 
@@ -44,12 +44,20 @@ class Feature(metaclass=abc.ABCMeta):
         """
         pass
 
+    @staticmethod
+    @abc.abstractmethod
+    def get_parameter_range(parameter: Literal['a', 'b']) -> tuple[float, float, float]:
+        """
+        Returns the minimum value, maximum value and intended step size of parameter a or b.
+        """
+        pass
+
 class PolynomialFeature(Feature):
     """
     Polynomial feature with an integer power. The 'parameter_a' attribute of the Feature base class
     is interpreted as the power, 'parameter_b' is the x-offset.
     """
-    def __init__(self, power: int, offset: int):
+    def __init__(self, power: int, offset: float):
         self._power = power
         self._offset = offset
 
@@ -58,7 +66,7 @@ class PolynomialFeature(Feature):
         return self._power
 
     @property
-    def parameter_b(self) -> int:
+    def parameter_b(self) -> float:
         return self._offset
     
     @parameter_a.setter
@@ -66,13 +74,13 @@ class PolynomialFeature(Feature):
         self._power = value
 
     @parameter_b.setter
-    def parameter_b(self, value: int) -> None:
+    def parameter_b(self, value: float) -> None:
         self._offset = value
 
     def __call__(self, input: NDArray) -> NDArray:
         # Scale the output with the inverse factorial of the power to prevent
         # higher order terms to overwhelm lower order terms.
-        return (input + self._offset) ** self._power / factorial(self._power)
+        return (input - self._offset) ** self._power / factorial(self._power)
 
     def get_expression(self) -> str:
         # Turn the expression into a fancy string, i.e. only add parentheses and exponent if required
@@ -80,15 +88,15 @@ class PolynomialFeature(Feature):
         if self._power == 0:
             return '1'
         
-        offset_sign = '+' if self._offset > 0 else '-'
+        offset_sign = '+' if self._offset < 0 else '-'
 
         # Determine if offset is needed in string and if parentheses should be added.
         if self._offset == 0:
             base = 'x'
         elif self._power == 1:
-            base = f'x {offset_sign} {abs(self._offset)}'
+            base = f'x {offset_sign} {abs(self._offset):.1f}'
         else:
-            base = f'(x {offset_sign} {abs(self._offset)})'
+            base = f'(x {offset_sign} {abs(self._offset):.1f})'
         
         # Add exponent if necessary.
         if self._power == 1:
@@ -97,6 +105,19 @@ class PolynomialFeature(Feature):
             name = f'{base}^{self._power}'
 
         return name
+    
+    @staticmethod
+    def get_parameter_range(parameter: Literal['a', 'b']) -> tuple[float, float, float]:
+        """
+        Returns the minimum value, maximum value and intended step size of parameter a or b:
+
+        parameter a (exponent): min=0,  max=4,  step_size=1
+        parameter b (center):   min=-4, max=4,  step_size=0.1
+        """
+        if parameter == 'a':
+            return (0, 4, 1)
+        elif parameter == 'b':
+            return (-4, 4, 0.1)
 
 class HarmonicFeature(Feature):
     """
@@ -141,39 +162,65 @@ class HarmonicFeature(Feature):
             name = f'\sin({self._frequency}\pi x{phase_string})'
 
         return name
+    
+    @staticmethod
+    def get_parameter_range(parameter: Literal['a', 'b']) -> tuple[float, float, float]:
+        """
+        Returns the minimum value, maximum value and intended step size of parameter a or b:
+
+        parameter a (frequency):    min=1,  max=4,  step_size=1
+        parameter b (phase):        min=0, max=3,  step_size=1
+        """
+        if parameter == 'a':
+            return (1, 4, 1)
+        elif parameter == 'b':
+            return (0, 3, 1)
 
 class GaussFeature(Feature):
     """
     Gaussian feature with frequency of a natural multiple of pi. The 'parameter_a' attribute of the
     Feature base class is interpreted as the variance of the curve, 'parameter_b' is the mean.
     """
-    def __init__(self, sigma: int, mu: int):
+    def __init__(self, sigma: float, mu: float):
         self._sigma = sigma
         self._mu = mu
 
     @property
-    def parameter_a(self) -> int:
+    def parameter_a(self) -> float:
         return self._sigma
 
     @property
-    def parameter_b(self) -> int:
+    def parameter_b(self) -> float:
         return self._mu
 
     @parameter_a.setter
-    def parameter_a(self, value: int) -> None:
+    def parameter_a(self, value: float) -> None:
         self._sigma = value
 
     @parameter_b.setter
-    def parameter_b(self, value: int) -> None:
+    def parameter_b(self, value: float) -> None:
         self._mu = value
 
     def __call__(self, input: NDArray) -> NDArray:
-        coeff = 1 / (np.sqrt(2 * np.pi) * self._sigma / 5)
-        exponent = -0.5 * ((input - self._mu) / self._sigma * 5) ** 2
+        coeff = 1 / (np.sqrt(2 * np.pi) * self._sigma)
+        exponent = -0.5 * ((input - self._mu) / self._sigma) ** 2
         return coeff * np.exp(exponent)
 
     def get_expression(self) -> str:
-        return r'\varphi_{' + f'\mu={self._mu}, \sigma={(self._sigma / 5):.1f}' + '}(x)'
+        return r'\varphi_{' + f'\mu={self._mu:.1f}, \sigma={self._sigma:.1f}' + '}(x)'
+
+    @staticmethod
+    def get_parameter_range(parameter: Literal['a', 'b']) -> tuple[float, float, float]:
+        """
+        Returns the minimum value, maximum value and intended step size of parameter a or b:
+
+        parameter a (sigma):    min=0.2,    max=1,  step_size=0.2
+        parameter b (mu):       min=-4,     max=4,  step_size=0.1
+        """
+        if parameter == 'a':
+            return (0.2, 1, 0.2)
+        elif parameter == 'b':
+            return (-4, 4, 0.1)
 
 class FeatureVector:
     """

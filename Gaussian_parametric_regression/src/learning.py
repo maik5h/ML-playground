@@ -1,15 +1,17 @@
+
+from typing import Literal, Callable
+
 import numpy as np
+from numpy.typing import NDArray
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.collections import PathCollection
 from matplotlib.backend_bases import KeyEvent
-from typing import Literal, Callable
-from numpy.typing import NDArray
-from config import Config
-from features import *
-from feature_controls import create_button
-from gaussians import InteractiveGaussian
-from time import sleep
+
+from .config import Config
+from .features import *
+from .feature_controls import create_button
+from .gaussians import InteractiveGaussian
 
 
 # Tuple of all Feature classes.

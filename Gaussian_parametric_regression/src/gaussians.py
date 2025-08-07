@@ -1,14 +1,16 @@
-from features import FeatureVector, Feature
-import numpy as np
-from matplotlib.backend_bases import MouseButton, MouseEvent, KeyEvent
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Button
-from scipy.stats import multivariate_normal
 from typing import Union, Literal
-from numpy.typing import NDArray
 from logging import warning
-from config import Config
+
 import scipy as sc
+from scipy.stats import multivariate_normal
+import numpy as np
+from numpy.typing import NDArray
+import matplotlib.pyplot as plt
+from matplotlib.backend_bases import MouseButton, MouseEvent, KeyEvent
+from matplotlib.widgets import Button
+
+from .features import FeatureVector, Feature
+from .config import Config
 
 
 def get_gaussian(x: NDArray, mu: NDArray, sigma: NDArray) -> Union[float, NDArray]:

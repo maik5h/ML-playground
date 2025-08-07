@@ -42,7 +42,7 @@ class Config:
     # Batch size of the dataloader.
     samples_per_learning_step: int = 1
 
-def load_config(path: str = './config.json') -> None:
+def load_config(path: str) -> None:
     """
     Copies the configuration from the json file at path into the static attributes of the Config class.
     """

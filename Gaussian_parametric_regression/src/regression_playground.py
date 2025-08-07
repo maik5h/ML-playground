@@ -1,9 +1,10 @@
-from gaussians import InteractiveGaussian
-from features import *
 import matplotlib.pyplot as plt
-from feature_controls import FeatureVectorController
-from config import load_config, Config
-from learning import InteractiveTrainer
+
+from .feature_controls import FeatureVectorController
+from .gaussians import InteractiveGaussian
+from .features import *
+from .config import load_config, Config
+from .learning import InteractiveTrainer
 
 
 def start_regression() -> None:
@@ -12,9 +13,6 @@ def start_regression() -> None:
     Creates noisy samples from the default function, creates the plot axes and connects events to
     InteractiveGaussian methods.
     """
-
-    load_config()
-
     plt.rcParams['font.size'] = 5
 
     # Set up plots for weight and function space.

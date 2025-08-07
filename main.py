@@ -1,3 +1,0 @@
-from regression_playground import start_regression
-
-start_regression()

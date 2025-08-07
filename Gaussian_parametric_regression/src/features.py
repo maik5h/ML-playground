@@ -1,8 +1,9 @@
+import abc
+from typing import SupportsIndex, Literal
+
 import numpy as np
 from scipy.special import factorial
-from typing import SupportsIndex, Literal
 from numpy.typing import NDArray
-import abc
 
 
 class Feature(metaclass=abc.ABCMeta):

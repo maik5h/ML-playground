@@ -8,10 +8,14 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.collections import PathCollection
 from matplotlib.backend_bases import KeyEvent
 
-from .config import Config
-from .features import *
+from ..math_utils import InteractiveGaussian
+from ..math_utils import Feature
+from ..math_utils import FeatureVector
+from ..math_utils import PolynomialFeature
+from ..math_utils import HarmonicFeature
+from ..math_utils import GaussFeature
+from ..config import Config
 from .feature_controls import create_button
-from .gaussians import InteractiveGaussian
 
 
 # Tuple of all Feature classes.

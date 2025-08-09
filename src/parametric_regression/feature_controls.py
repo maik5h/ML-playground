@@ -3,8 +3,8 @@ from typing import Union, Literal, Optional, Callable, Sequence
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, Slider
 
-from .gaussians import InteractiveGaussian
-from .features import Feature, PolynomialFeature, HarmonicFeature, GaussFeature
+from ..math_utils.gaussians import InteractiveGaussian
+from ..math_utils.features import Feature, PolynomialFeature, HarmonicFeature, GaussFeature
 
 
 # The maximum number of features that the FeatureVector class can hold.

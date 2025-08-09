@@ -1,14 +1,14 @@
 # A Playground for Parametric Gaussian Regression
 
 ## Overview
-This code provides an interactive visualization of parametric Gaussian models and regression. It lets you build and edit a simple parametric function interactively at runtime. You can adjust the weights of your model to define the prior distribution and let the model learn using Bayesian inference.\
+This project provides an interactive visualization of parametric Gaussian models and regression. It lets you build and edit a simple parametric function interactively at runtime. You can adjust the weights of your model to define the prior distribution and let the model learn using Bayesian inference.\
 \
-Required Python packages are:
+This code can be run without being installed, as long as the required packages are available:
 - Matplotlib
 - NumPy
 - SciPy
 
-Run main.py to open the plot.
+Run `python run_parametric_regression.py` to open the plot.
 
 ## What you can do
 

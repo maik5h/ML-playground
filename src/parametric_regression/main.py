@@ -1,17 +1,19 @@
 import matplotlib.pyplot as plt
 
+from ..math_utils import InteractiveGaussian
+from ..math_utils import FeatureVector
+from ..math_utils import PolynomialFeature
+from ..config import Config
 from .feature_controls import FeatureVectorController
-from .gaussians import InteractiveGaussian
-from .features import *
-from .config import load_config, Config
 from .learning import InteractiveTrainer
 
 
-def start_regression() -> None:
+def run_parametric_regression() -> None:
     """
-    Starts the regression session.
-    Creates noisy samples from the default function, creates the plot axes and connects events to
-    InteractiveGaussian methods.
+    Starts the regression session. Opens a window with an interactive
+    plot allowing to define a Gaussian model from given feature
+    functions, edit the model weights through mouse inputs and start
+    the learning process.
     """
     plt.rcParams['font.size'] = 5
 

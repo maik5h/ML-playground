@@ -1,5 +1,7 @@
 import json
 from logging import warning
+from pathlib import Path
+from typing import Optional
 
 
 class Config:
@@ -42,10 +44,14 @@ class Config:
     # Batch size of the dataloader.
     samples_per_learning_step: int = 1
 
-def load_config(path: str) -> None:
+def load_config(path: Optional[str] = None) -> None:
     """
     Copies the configuration from the json file at path into the static attributes of the Config class.
     """
+    # The default location of the config file is the src\config\
+    # directory which also contains this file.
+    path = path or Path(__file__).parent.resolve() / 'config.json'
+
     try:
         with open(path, 'r') as f:
             cfg = json.load(f)

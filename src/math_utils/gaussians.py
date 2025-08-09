@@ -10,7 +10,7 @@ from matplotlib.backend_bases import MouseButton, MouseEvent, KeyEvent
 from matplotlib.widgets import Button
 
 from .features import FeatureVector, Feature
-from .config import Config
+from ..config import Config
 
 
 def get_gaussian(x: NDArray, mu: NDArray, sigma: NDArray) -> Union[float, NDArray]:

@@ -1,10 +1,11 @@
-from typing import Union, Literal, Optional, Callable, Sequence
+from typing import Union, Literal, Optional, Sequence
 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, Slider
 
-from ..math_utils.gaussians import InteractiveGaussian
-from ..math_utils.features import Feature, PolynomialFeature, HarmonicFeature, GaussFeature
+from .model import InteractiveGaussian
+from ..math_utils import Feature, PolynomialFeature, HarmonicFeature, GaussFeature
+from ..gui_utils import create_button
 
 
 # The maximum number of features that the FeatureVector class can hold.
@@ -37,32 +38,6 @@ def pos(element: Literal['button', 'controller'], row: int) -> tuple[float, floa
 
     return (x, y - (row + row_offset) * Y_SPACING, w, h)
 
-def create_button(pos: tuple[float, float, float, float],
-                  label: str,
-                  on_clicked: Optional[Callable] = None,
-                  target_list: Optional[list[Button]] = None) -> Button:
-    """
-    Creates a button with the specified attributes and adds it to the target_list. Returns the new button.
-
-    Parameters
-    ----------
-    pos: `tuple[float, float, float, float]`
-        Button position relative to full figure in XYWH notation.
-    label: `str`
-        Button label as string.
-    on_clicked: `Optional[Callable]`
-        The function to call when button is clicked.
-    target_list: `Optional[list[Button]]`
-        A list this button is added to.
-    """
-    button_ax = plt.axes(pos)
-    button = Button(button_ax, label=label)
-    if on_clicked is not None:
-        button.on_clicked(on_clicked)
-    if target_list is not None:
-        target_list.append(button)
-
-    return button
 
 def hide_widget(widget: Union[Button, Slider], callback_id: Optional[int] = None) -> None:
     """

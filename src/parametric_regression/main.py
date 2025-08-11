@@ -1,11 +1,12 @@
 import matplotlib.pyplot as plt
 
-from ..math_utils import InteractiveGaussian
+from .model import InteractiveGaussian
 from ..math_utils import FeatureVector
 from ..math_utils import PolynomialFeature
 from ..config import Config
 from .feature_controls import FeatureVectorController
-from .learning import InteractiveTrainer
+from ..math_utils import InteractiveTrainer
+from .data_generator import generate_target_samples
 
 
 def run_parametric_regression() -> None:
@@ -37,7 +38,11 @@ def run_parametric_regression() -> None:
     feature_controller = FeatureVectorController(fig, model)
 
     trainer_x = ax_weight.get_position().x0
-    trainer = InteractiveTrainer((trainer_x, 0.85, 0.98, 0.95), model, fig, ax_func)
+    trainer = InteractiveTrainer(area=(trainer_x, 0.85, 0.98, 0.95),
+                                 model=model,
+                                 data_generator=generate_target_samples,
+                                 fig=fig,
+                                 ax=ax_func)
 
     # Connect matplotlib callbacks.
     fig.canvas.mpl_connect('button_press_event', model.on_mouse_button_down)

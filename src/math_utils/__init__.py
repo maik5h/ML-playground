@@ -1,6 +1,12 @@
 # Classes representing Gaussian random variables.
+from .model_base import TrainableModel
 from .gaussians import Gaussian
-from .gaussians import InteractiveGaussian
+from .gaussian_process import GaussianProcess
+from .gaussians import get_gaussian
+
+# Classes involved in training of a model.
+from .training import DataLoader
+from .training import InteractiveTrainer
 
 # Feature functions to be used in parametric regression.
 from .features import Feature

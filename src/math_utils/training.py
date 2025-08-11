@@ -1,4 +1,3 @@
-
 from typing import Literal, Callable
 
 import numpy as np
@@ -8,75 +7,20 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.collections import PathCollection
 from matplotlib.backend_bases import KeyEvent
 
-from ..math_utils import InteractiveGaussian
-from ..math_utils import Feature
-from ..math_utils import FeatureVector
-from ..math_utils import PolynomialFeature
-from ..math_utils import HarmonicFeature
-from ..math_utils import GaussFeature
+from ..math_utils import TrainableModel
 from ..config import Config
-from .feature_controls import create_button
+from ..gui_utils import create_button
 
 
-# Tuple of all Feature classes.
-available_features = (PolynomialFeature, HarmonicFeature, GaussFeature)
+# Tuple and type of all sampling orders that can be used for data
+# loading.
+SAMPLING_ORDERS = ('sequential', 'random', 'least likely')
+SamplingOrder = Literal['sequential', 'random', 'least likely']
 
-# Tuple of all sampling orders.
-data_loader_sampling_orders = ['sequential', 'random', 'least likely']
-
-def generate_target_samples(n_samples: int, noise_amount: float) -> tuple[NDArray, NDArray]:
-    """
-    Generates a randomized selection of samples.
-
-    Creates a function from the Features defined in features.py with weights and parameters within
-    the range used by the gaussians.InteractiveGaussian plots and feature_controls.FeatureController
-    interface. This makes sure that the target funciton can always be approached using the interface.
-    Gaussian noise is added to the function values.
-
-    Returns x- and y-values of the samples in separate arrays.
-
-    Parameters
-    ----------
-
-    n_samples: `int`
-        Number of samples to take from the target function.
-    noise_amount: `float`
-        Variance of the Gaussian noise added to the samples.
-    """
-    # Create a random target function using a FeatureVector.
-    target_function = FeatureVector([])
-    n_features = np.random.randint(1, 3)
-    for _ in range(n_features):
-        feature_type = np.random.randint(0, len(available_features))
-
-        # Choose a parameter that lies within the available weight space.
-        min, max, step = available_features[feature_type].get_parameter_range('a')
-        valid_parameters_a = np.arange(min, max, step)
-
-        min, max, step = available_features[feature_type].get_parameter_range('b')
-        valid_parameters_b = np.arange(min, max, step)
-
-        parameter_a = valid_parameters_a[np.random.randint(len(valid_parameters_a))]
-        parameter_b = valid_parameters_b[np.random.randint(len(valid_parameters_b))]
-        target_function.add_feature(available_features[feature_type](parameter_a, parameter_b))
-
-    # Evaluate the target function at n_samples x positions. This returns an array with each
-    # feature evaluated at x separately with shape=(n_samples, n_features).
-    x_range = Config.function_space_xlim
-    x_samples = np.linspace(x_range[0], x_range[1], n_samples)
-    y_features = target_function(x_samples)
-
-    # Create a weight for each feature and make sure all weights lie well inside the plotted space.
-    weights = np.random.rand(n_features) * Config.weight_space_xlim[1] * 1.6 - Config.weight_space_xlim[1] * 0.8
-    y_samples = y_features @ weights
-
-    y_samples += np.random.normal(0, scale=noise_amount, size=y_samples.shape)
-
-    return x_samples, y_samples
 
 class DataLoader:
     """
-    Class to store and load x and y data pairs as returned by generate_target_samples.
+    Class to store and load x and y data pairs.
 
     Attributes
     ----------
@@ -85,14 +29,20 @@ class DataLoader:
         Array of x data points.
     y_data: `NDArray`
         Array of y data points.
-    order: `Literal['sequential', 'random', 'least likely']`
+    order: `SamplingOrder`
         The order in which the datapoints are returned.
-        - 'sequential': returns datapoints in the order they are stored in the arrays.
+        - 'sequential': returns datapoints in the order they are
+        stored in the arrays.
         - 'random': returns datapoints in random order.
-        - 'least likely': TODO return the point which is the least likely given the current model prediction.
+        - 'least likely': returns the point which is the least likely
+        given the current model prediction.
     """
-    def __init__(self, x_data: NDArray, y_data: NDArray, model: InteractiveGaussian,
-                 order: Literal['sequential', 'random', 'least likely'],batch_size: int = 1):
+    def __init__(self,
+                 x_data: NDArray,
+                 y_data: NDArray,
+                 model: TrainableModel,
+                 order: SamplingOrder,
+                 batch_size: int = 1):
         self.x_data = x_data
         self.y_data = y_data
         self._model = model
@@ -101,7 +51,7 @@ class DataLoader:
         self._used_indices = []
         self._remaining_indices = np.arange(len(x_data))
     
-    def set_order(self, order: Literal['sequential', 'random', 'least likely']) -> None:
+    def set_order(self, order: SamplingOrder) -> None:
         """
         Sets the sampling order of this DataLoader. This resets the instance and starts the iteration over.
         """
@@ -240,25 +190,37 @@ class AnimationManager:
 
 class InteractiveTrainer:
     """
-    Extends the Trainer class by methods to plot the target data, change the dataloader mode and start
-    the training during runtime.
+    Adds a control panel to a given area on a matplotlib plot when
+    initialized. The control panel offers access to the training
+    procedure of a model, including the generation of target data,
+    sampling and updating the model.
     """
-    def __init__(self, area: tuple[float, float, float, float], gaussian: InteractiveGaussian, fig: plt.figure, ax: plt.axis):
+    def __init__(self,
+                 area: tuple[float, float, float, float],
+                 model: TrainableModel,
+                 data_generator: Callable[[], tuple[NDArray, NDArray]],
+                 fig: plt.figure,
+                 ax: plt.axis):
         """
         Parameters
         ----------
 
         area: `tuple[float, float, float, float]`
-            Relative XYXY coordinates on the figure where the IntaeractiveTrainer interface is displayed.
-        gaussian: `InteractiveGaussian`
+            Relative XYXY coordinates on the figure where the
+            InteractiveTrainer interface is displayed.
+        model: `TrainableModel`
             The model that is being trained.
+        data_generator: `Callable[[], NDArray]`
+            A function that returns a tuple of target x and y values,
+            which are learned by the model.
         fig: `matplotlib.pyplot.figure`
             The figure to add the interface to.
         ax: `matplotlib.pyplot.axis`
             The axis to plot the target samples to.
         """
-        self.gaussian: InteractiveGaussian = gaussian
-        self._data_loader: DataLoader = DataLoader([], [], self.gaussian, 'sequential')
+        self._model: TrainableModel = model
+        self._data_generator = data_generator
+        self._data_loader: DataLoader = DataLoader([], [], self._model, 'sequential')
         self._fig = fig
         self._ax = ax
 
@@ -267,7 +229,8 @@ class InteractiveTrainer:
         self._collection_remaining = None
         self._collection_used = None
 
-        # The animation that updates the gaussian weights and the plot of target samples.
+        # The animation that updates the plots regarding the model and
+        # target data.
         self._anim = AnimationManager(self._create_animation)
 
         self._generate_target_data()
@@ -303,7 +266,7 @@ class InteractiveTrainer:
         """
         self._anim.end()
 
-        x_data, y_data = generate_target_samples(Config.number_target_samples, Config.target_noise_amount)
+        x_data, y_data = self._data_generator(Config.number_target_samples, Config.target_noise_amount)
         self._data_loader.set_data(x_data, y_data)
         self._plot_target_samples()
     
@@ -315,15 +278,15 @@ class InteractiveTrainer:
 
         # Update DataLoader sampling order.
         active_order = self._data_loader._order
-        active_idx = data_loader_sampling_orders.index(active_order)
-        if active_idx == len(data_loader_sampling_orders) - 1:
+        active_idx = SAMPLING_ORDERS.index(active_order)
+        if active_idx == len(SAMPLING_ORDERS) - 1:
             active_idx = 0
         else:
             active_idx += 1
         
         # Update the order buttons text.
-        self._data_loader.set_order(data_loader_sampling_orders[active_idx])
-        self._order_button.label.set_text(f'Sampling order:\n{data_loader_sampling_orders[active_idx]}')
+        self._data_loader.set_order(SAMPLING_ORDERS[active_idx])
+        self._order_button.label.set_text(f'Sampling order:\n{SAMPLING_ORDERS[active_idx]}')
         self._plot_target_samples()
 
     def _plot_target_samples(self) -> None:
@@ -351,17 +314,13 @@ class InteractiveTrainer:
         """
         x, y = self._data_loader.__next__()
 
-        # Update the Gaussians weights.
-        phi = self.gaussian.phi(x).T
         noise_sigma = Config.target_noise_amount * np.eye(len(x))
-        noise_sigma = 1 * np.eye(len(x))
 
         # If only one datapoint is loaded, remove extra dimension created by np.eye().
         if len(x) == 1:
             noise_sigma = noise_sigma[0]
 
-        self.gaussian.condition(phi, y, noise_sigma)
-        self.gaussian.plot()
+        self._model.condition(x, y, noise_sigma)
 
         self._plot_target_samples()
 

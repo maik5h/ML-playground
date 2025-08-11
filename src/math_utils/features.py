@@ -8,9 +8,11 @@ from numpy.typing import NDArray
 
 class Feature(metaclass=abc.ABCMeta):
     """
-    Base class for features. All features are parameterized by two values, parameter_a and parameter_b.
-    The interpretation of these values is subject of the implementations of the subclasses, they may
-    for example denote exponent and x-offset of a polynomial term.
+    Base class for features, i.e. 1D functions that are used to build
+    parametric models. All features are parameterized by two values,
+    parameter_a and parameter_b. The interpretation of these values
+    is subject of the implementations of the subclasses, they may for
+    example denote exponent and x-offset of a polynomial term.
     """
     @property
     @abc.abstractmethod

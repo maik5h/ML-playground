@@ -1,7 +1,6 @@
 # Classes representing Gaussian random variables.
 from .model_base import TrainableModel
 from .gaussians import Gaussian
-from .gaussian_process import GaussianProcess
 from .gaussians import get_gaussian
 
 # Classes involved in training of a model.

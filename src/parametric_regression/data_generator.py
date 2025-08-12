@@ -36,16 +36,14 @@ def generate_target_samples(n_samples: int, noise_amount: float) -> tuple[NDArra
     for _ in range(n_features):
         feature_type = np.random.randint(0, len(available_features))
 
-        # Choose a parameter that lies within the available weight space.
-        min, max, step = available_features[feature_type].get_parameter_range('a')
-        valid_parameters_a = np.arange(min, max, step)
+        # Choose parameters that lies within the available weight space.
+        parameters = []
+        for lims in available_features[feature_type].get_parameter_limits():
+            # Determine valid parameters and choose a random value.
+            valid_ps = np.arange(lims[0], lims[1], lims[2])
+            parameters.append(valid_ps[np.random.randint(len(valid_ps))])
 
-        min, max, step = available_features[feature_type].get_parameter_range('b')
-        valid_parameters_b = np.arange(min, max, step)
-
-        parameter_a = valid_parameters_a[np.random.randint(len(valid_parameters_a))]
-        parameter_b = valid_parameters_b[np.random.randint(len(valid_parameters_b))]
-        target_function.add_feature(available_features[feature_type](parameter_a, parameter_b))
+        target_function.add_feature(available_features[feature_type](*parameters))
 
     # Evaluate the target function at n_samples x positions. This returns an array with each
     # feature evaluated at x separately with shape=(n_samples, n_features).

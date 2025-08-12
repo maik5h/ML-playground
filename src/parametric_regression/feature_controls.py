@@ -135,7 +135,7 @@ class FeatureController:
         self._idx = new_idx
         if self._feature is not None:
             self._label.set_text(f'$\phi_{self._idx+1}(x) = {self._feature.get_expression()}$')
-    
+
     def hide(self) -> None:
         """
         Hides and disables this FeatureController. Disconnects the callback function of slider
@@ -143,11 +143,12 @@ class FeatureController:
         """
         self._label.axes.set_visible(False)
         hide_widget(self._slider_a, self._slider_id)
-        hide_widget(self._slider_b, self._slider_id)
+        if self._slider_b is not None:
+            hide_widget(self._slider_b, self._slider_id)
         hide_widget(self._x_button, self._button_id)
 
         self._feature = None
-    
+
     def set_feature(self, feature: Feature) -> None:
         """
         Sets up label, slider and X-button to accomodate the given Feature.
@@ -167,20 +168,23 @@ class FeatureController:
         # of the previous Sliders might be displayed.
         self._refresh_axes()
 
-        min, max, step = feature.get_parameter_range('a')
+        limits = feature.get_parameter_limits()
+        min, max, step = limits[0]
         self._slider_a = Slider(self._ax_slider_a, '', valmin=min, valmax=max,
-                                valinit=feature.parameter_a, valstep=step, handle_style={'size': 5})
+                                valinit=feature.parameters[0], valstep=step, handle_style={'size': 5})
         self._slider_a.valtext.set_visible(False)
-
-        min, max, step = feature.get_parameter_range('b')
-        self._slider_b = Slider(self._ax_slider_b, '', valmin=min, valmax=max,
-                                valinit=feature.parameter_b, valstep=step, handle_style={'size': 5})
-        self._slider_b.valtext.set_visible(False)
-
         self._slider_a_id = self._slider_a.on_changed(self._on_slider_a_changed)
-        self._slider_b_id = self._slider_b.on_changed(self._on_slider_b_changed)
-        self._slider_a.set_val(feature.parameter_a)
-        self._slider_b.set_val(feature.parameter_b)
+        self._slider_a.set_val(feature.parameters[0])
+        self._ax_slider_a.set_visible(True)
+
+        if len(limits) > 1:
+            min, max, step = limits[1]
+            self._slider_b = Slider(self._ax_slider_b, '', valmin=min, valmax=max,
+                                    valinit=feature.parameters[1], valstep=step, handle_style={'size': 5})
+            self._slider_b.valtext.set_visible(False)
+            self._slider_b_id = self._slider_b.on_changed(self._on_slider_b_changed)
+            self._slider_b.set_val(feature.parameters[1])
+            self._ax_slider_b.set_visible(True)
         
         self._button_id = self._x_button.on_clicked(lambda event: self._parent_controller.remove_feature(self._idx))
     
@@ -193,19 +197,21 @@ class FeatureController:
         pos = (pos[0, 0], pos[0, 1], pos[1, 0] - pos[0, 0], pos[1, 1] - pos[0, 1])
         self._ax_slider_a.remove()
         self._ax_slider_a = plt.axes(pos)
+        self._ax_slider_a.set_visible(False)
 
         pos = self._ax_slider_b.get_position().get_points()
         pos = (pos[0, 0], pos[0, 1], pos[1, 0] - pos[0, 0], pos[1, 1] - pos[0, 1])
         self._ax_slider_b.remove()
         self._ax_slider_b = plt.axes(pos)
+        self._ax_slider_b.set_visible(False)
 
     def _on_slider_a_changed(self, val: float) -> None:
-        self._feature.parameter_a = val
+        self._feature.set_parameter(0, val)
         self._parent_controller.gauss.update_feature_parameter()
         self._label.set_text(f'$\phi_{self._idx+1}(x) = {self._feature.get_expression()}$')
 
     def _on_slider_b_changed(self, val: float) -> None:
-        self._feature.parameter_b = val
+        self._feature.set_parameter(1, val)
         self._parent_controller.gauss.update_feature_parameter()
         self._label.set_text(f'$\phi_{self._idx+1}(x) = {self._feature.get_expression()}$')
     
@@ -240,7 +246,7 @@ class FeatureVectorController:
         """
         create_button(pos           = pos('button', row=0),
                       label         = 'Add power feature',
-                      on_clicked    = lambda event: self.add_feature(PolynomialFeature(0, 0)),
+                      on_clicked    = lambda event: self.add_feature(PolynomialFeature(0)),
                       target_list   = self._control_buttons)
         
         create_button(pos           = pos('button', row=1),

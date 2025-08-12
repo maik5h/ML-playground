@@ -32,7 +32,7 @@ def run_parametric_regression() -> None:
     ax_controls.axis('off')
 
     # Forward default features and axes to the model.
-    init_features = FeatureVector([PolynomialFeature(power=0, offset=0), PolynomialFeature(power=1, offset=0)])
+    init_features = FeatureVector([PolynomialFeature(power=0), PolynomialFeature(power=1)])
     model = InteractiveGaussian(init_features, ax_weight, ax_func)
 
     feature_controller = FeatureVectorController(fig, model)

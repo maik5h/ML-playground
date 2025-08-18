@@ -3,7 +3,7 @@ from typing import Union, Literal, Optional, Sequence
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, Slider
 
-from .model import InteractiveGaussian
+from .model import ParametricGaussian
 from ..math_utils import Feature, PolynomialFeature, HarmonicFeature, GaussFeature
 from ..gui_utils import create_button
 
@@ -217,12 +217,12 @@ class FeatureController:
     
 class FeatureVectorController:
     """
-    Controlls the feature vector of a given InteractiveGaussian.
+    Controlls the feature vector of a given ParametricGaussian.
     Draws buttons that let the user dynamically add new features, and a FeatureController instance
     for every active feature to a figure.
     """
-    def __init__(self, fig: plt.figure, gaussian: InteractiveGaussian):
-        # Reference to target figure and InteractiveGaussian object.
+    def __init__(self, fig: plt.figure, gaussian: ParametricGaussian):
+        # Reference to target figure and ParametricGaussian object.
         self.fig = fig
         self.gauss = gaussian
 
@@ -275,7 +275,7 @@ class FeatureVectorController:
         Removes the feature at index idx from the gaussians phi attribute and hides and disconnects
         the FeatureController associated with it.
         """
-        # The InteractiveGaussian class requires at least two active features.
+        # The ParametricGaussian class requires at least two active features.
         if self._number_active_features == 2: return
 
         self._feature_controllers[idx].hide()

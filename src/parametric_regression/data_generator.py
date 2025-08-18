@@ -16,7 +16,7 @@ def generate_target_samples(n_samples: int, noise_amount: float) -> tuple[NDArra
     Generates a randomized selection of samples.
 
     Creates a function from the Features defined in features.py with weights and parameters within
-    the range used by the gaussians.InteractiveGaussian plots and feature_controls.FeatureController
+    the range used by the gaussians.ParametricGaussian plots and feature_controls.FeatureController
     interface. This makes sure that the target funciton can always be approached using the interface.
     Gaussian noise is added to the function values.
 

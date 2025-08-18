@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 
-from .model import InteractiveGaussian
+from .model import ParametricGaussian
+from .model_gui import WeightSpaceGUI, FunctionSpacePlot
 from ..math_utils import FeatureVector
 from ..math_utils import PolynomialFeature
 from ..config import Config
@@ -31,12 +32,18 @@ def run_parametric_regression() -> None:
     ax_func.set_ylim(Config.function_space_ylim)
     ax_controls.axis('off')
 
-    # Forward default features and axes to the model.
+    # Create initial features and model.
     init_features = FeatureVector([PolynomialFeature(power=0), PolynomialFeature(power=1)])
-    model = InteractiveGaussian(init_features, ax_weight, ax_func)
+    model = ParametricGaussian(init_features)
 
+    # Create graphic representation of the model.
+    weight_space_UI = WeightSpaceGUI(model, fig, ax_weight)
+    function_space_plot = FunctionSpacePlot(model, ax_func)
+
+    # Create interface to build the feature function.
     feature_controller = FeatureVectorController(fig, model)
 
+    # Create interface controlling the training of the model.
     trainer_x = ax_weight.get_position().x0
     trainer = InteractiveTrainer(area=(trainer_x, 0.85, 0.98, 0.95),
                                  model=model,
@@ -44,16 +51,6 @@ def run_parametric_regression() -> None:
                                  fig=fig,
                                  ax=ax_func)
 
-    # Connect matplotlib callbacks.
-    fig.canvas.mpl_connect('button_press_event', model.on_mouse_button_down)
-    fig.canvas.mpl_connect('motion_notify_event', model.on_mouse_move)
-    fig.canvas.mpl_connect('button_release_event', model.on_mouse_button_up)
-    fig.canvas.mpl_connect('key_press_event', model.on_key_pressed)
-    fig.canvas.mpl_connect('key_release_event', model.on_key_released)
-    fig.canvas.mpl_connect('scroll_event', model.on_scroll_event)
     fig.canvas.mpl_connect('key_press_event', trainer.on_key_press)
-
-    # Let the model plot its distributions.
-    model.plot()
 
     plt.show()

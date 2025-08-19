@@ -1,6 +1,7 @@
 from typing import Union, Literal, Optional, Sequence
 
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 from matplotlib.widgets import Button, Slider
 
 from .model import ParametricGaussian
@@ -84,17 +85,17 @@ class FeatureController:
 
         # Initialize required axes with arbitrary values and set correct values via
         # self.set_position later.
-        ax_label    = plt.axes([0, 0, 1, 1])
+        ax_label = plt.axes([0, 0, 1, 1])
         self._ax_slider_a = plt.axes([0, 0, 1, 1])
         self._ax_slider_b = plt.axes([0, 0, 1, 1])
-        self._ax_button   = plt.axes([0, 0, 1, 1])
+        self._ax_button = plt.axes([0, 0, 1, 1])
 
         ax_label.axis('off')
 
         # Initialize label and Buttons. Label text can be changed during runtime, Button does not have to be
         # changed at all.
-        self._label      = ax_label.text(0, 0, '', verticalalignment='top')
-        self._x_button   = Button(self._ax_button, 'X', color='#DF908F', hovercolor='#F5BDBC')
+        self._label = ax_label.text(0, 0, '', verticalalignment='top')
+        self._x_button = Button(self._ax_button, 'X', color='#DF908F', hovercolor='#F5BDBC')
 
         # Do not initialize sliders, as they are specific to the feature that is displayed and can not be
         # edited during runtime. They are initialized in self.set_feature(...).
@@ -118,10 +119,10 @@ class FeatureController:
         Sets this FeatureController to the given new position by updating the axes of all members
         to fit into the new position.
         """
-        x       = new_position[0]
-        y       = new_position[1]
-        width   = new_position[2]
-        height  = new_position[3]
+        x = new_position[0]
+        y = new_position[1]
+        width = new_position[2]
+        height = new_position[3]
 
         self._label.axes.set_position([x, y + height, 0.6*width, 0.3*height])
         self._ax_slider_a.set_position([x, y + 0.35*height, 0.8*width, 0.3*height])
@@ -214,14 +215,15 @@ class FeatureController:
         self._feature.set_parameter(1, val)
         self._parent_controller.gauss.update_feature_parameter()
         self._label.set_text(f'$\phi_{self._idx+1}(x) = {self._feature.get_expression()}$')
-    
+
+
 class FeatureVectorController:
     """
     Controlls the feature vector of a given ParametricGaussian.
     Draws buttons that let the user dynamically add new features, and a FeatureController instance
     for every active feature to a figure.
     """
-    def __init__(self, fig: plt.figure, gaussian: ParametricGaussian):
+    def __init__(self, fig: Figure, gaussian: ParametricGaussian):
         # Reference to target figure and ParametricGaussian object.
         self.fig = fig
         self.gauss = gaussian

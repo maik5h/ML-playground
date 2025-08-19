@@ -2,7 +2,8 @@ from typing import Literal, Callable
 
 import numpy as np
 from numpy.typing import NDArray
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 from matplotlib.animation import FuncAnimation
 from matplotlib.collections import PathCollection
 from matplotlib.backend_bases import KeyEvent
@@ -199,8 +200,8 @@ class InteractiveTrainer:
                  area: tuple[float, float, float, float],
                  model: TrainableModel,
                  data_generator: Callable[[], tuple[NDArray, NDArray]],
-                 fig: plt.figure,
-                 ax: plt.axis):
+                 fig: Figure,
+                 ax: Axes):
         """
         Parameters
         ----------
@@ -213,10 +214,10 @@ class InteractiveTrainer:
         data_generator: `Callable[[], NDArray]`
             A function that returns a tuple of target x and y values,
             which are learned by the model.
-        fig: `matplotlib.pyplot.figure`
+        fig: `Figure`
             The figure to add the interface to.
-        ax: `matplotlib.pyplot.axis`
-            The axis to plot the target samples to.
+        ax: `Axes`
+            The axes to plot the target samples to.
         """
         self._model: TrainableModel = model
         self._data_generator = data_generator
@@ -291,7 +292,7 @@ class InteractiveTrainer:
 
     def _plot_target_samples(self) -> None:
         """
-        Plots the target samples to self.ax. Samples that have been used in training, i.e. samples that
+        Plots the target samples to self._ax. Samples that have been used in training, i.e. samples that
         have been returned by self._data_loader, are displayed as small dots. Samples that werent used
         in training yet are large 'o's.
         """

@@ -12,6 +12,8 @@ the latter only accesses their `update` method.
 from typing import Literal
 
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.axes import Axes
 from matplotlib.widgets import Button
 from matplotlib.backend_bases import MouseButton, MouseEvent, KeyEvent
 import numpy as np
@@ -29,7 +31,7 @@ class WeightSpaceGUI:
     Two of the Gaussian random variables are displayed on a given axis
     and can be edited through different user inputs.
     """
-    def __init__(self, model: ParametricGaussian, fig, ax):
+    def __init__(self, model: ParametricGaussian, fig: Figure, ax: Axes):
         self._model = model
         self._ax = ax
 
@@ -318,7 +320,7 @@ class WeightSpaceGUI:
 
 
 class FunctionSpacePlot:
-    def __init__(self, model: ParametricGaussian, ax):
+    def __init__(self, model: ParametricGaussian, ax: Axes):
         self._model = model
         self._model.notify_func_gui = self.update
         self._ax = ax

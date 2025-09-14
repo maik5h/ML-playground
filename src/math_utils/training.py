@@ -211,9 +211,8 @@ class InteractiveTrainer:
             InteractiveTrainer interface is displayed.
         model: `TrainableModel`
             The model that is being trained.
-        data_generator: `Callable[[], NDArray]`
-            A function that returns a tuple of target x and y values,
-            which are learned by the model.
+        data_generator: `Callable[[], tuple[NDArray, NDArray]]`
+            A Callable that returns a tuple of target x and y samples.
         fig: `Figure`
             The figure to add the interface to.
         ax: `Axes`
@@ -267,7 +266,7 @@ class InteractiveTrainer:
         """
         self._anim.end()
 
-        x_data, y_data = self._data_generator(Config.number_target_samples, Config.target_noise_amount)
+        x_data, y_data = self._data_generator()
         self._data_loader.set_data(x_data, y_data)
         self._plot_target_samples()
     

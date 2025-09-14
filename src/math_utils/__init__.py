@@ -13,3 +13,6 @@ from .features import FeatureVector
 from .features import PolynomialFeature
 from .features import HarmonicFeature
 from .features import GaussFeature
+
+# Callable class to create random x-y-samples.
+from .data_generators import FeatureSampleGenerator

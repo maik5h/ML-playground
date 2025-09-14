@@ -7,7 +7,7 @@ from ..math_utils import PolynomialFeature
 from ..config import Config
 from .feature_controls import FeatureVectorController
 from ..math_utils import InteractiveTrainer
-from .data_generator import generate_target_samples
+from ..math_utils import FeatureSampleGenerator
 
 
 def run_parametric_regression() -> None:
@@ -43,11 +43,20 @@ def run_parametric_regression() -> None:
     # Create interface to build the feature function.
     feature_controller = FeatureVectorController(fig, model)
 
+    # Random generator for training data, configured such that the
+    # target function lies within the displayed weight space limits.
+    data_gen = FeatureSampleGenerator(
+        Config.number_target_samples,
+        Config.target_noise_amount,
+        Config.function_space_xlim,
+        Config.weight_space_xlim[1] * 0.8
+    )
+
     # Create interface controlling the training of the model.
     trainer_x = ax_weight.get_position().x0
     trainer = InteractiveTrainer(area=(trainer_x, 0.85, 0.98, 0.95),
                                  model=model,
-                                 data_generator=generate_target_samples,
+                                 data_generator=data_gen,
                                  fig=fig,
                                  ax=ax_func)
 

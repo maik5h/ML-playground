@@ -67,7 +67,7 @@ class ParametricGaussian(Gaussian, TrainableModel):
         self.notify_weight_gui: Callable[[StateInfo], None] = None
         self.notify_func_gui: Callable[[StateInfo], None] = None
 
-    def condition(self, x: NDArray, y: NDArray, sigma: NDArray) -> None:
+    def condition(self, x: NDArray, y: NDArray, sigma: NDArray) -> bool:
         """
         Updates this Gaussian to represent the conditional probability
         given a linear transformation phi, data Y and the noise amount
@@ -93,6 +93,15 @@ class ParametricGaussian(Gaussian, TrainableModel):
             self.sigma -= self.sigma @ phi @ sc.linalg.cho_solve(fac, phi.T @ self.sigma)
         
         self._notify_gui(StateInfo(update_plot=True))
+
+        return True
+
+    def restart_training(self):
+        """Starting a new training session does not alter the state of
+        this model. The current distribution may be used as a prior for
+        the upcoming training.
+        """
+        return
 
     def add_feature(self, feature: Feature) -> None:
         """

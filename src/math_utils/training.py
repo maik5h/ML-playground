@@ -313,14 +313,14 @@ class InteractiveTrainer:
         Updates the target samples plot.
         """
         x, y = self._data_loader.__next__()
-
         noise_sigma = Config.target_noise_amount * np.eye(len(x))
-
         # If only one datapoint is loaded, remove extra dimension created by np.eye().
         if len(x) == 1:
             noise_sigma = noise_sigma[0]
 
-        self._model.condition(x, y, noise_sigma)
+        # End the animation if the model requests so by returnin False.
+        if not self._model.condition(x, y, noise_sigma):
+            self._anim.end()
 
         self._plot_target_samples()
 
@@ -331,6 +331,7 @@ class InteractiveTrainer:
         return (self._collection_remaining, self._collection_used)
 
     def _create_animation(self) -> FuncAnimation:
+        self._model.restart_training()
         self._data_loader.reset()
         data = self._data_loader
         animation = FuncAnimation(self._fig, self._training_step,

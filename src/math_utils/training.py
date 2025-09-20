@@ -141,6 +141,7 @@ class DataLoader:
     def __len__(self) -> int:
         return len(self.x_data)
 
+
 class AnimationManager:
     """
     Class to manage a matplotlib FuncAnimation. Offers easier control to start, stop or start over from
@@ -188,6 +189,7 @@ class AnimationManager:
             else:
                 self._animation.resume()
                 self._is_playing = True
+
 
 class InteractiveTrainer:
     """
@@ -257,6 +259,7 @@ class InteractiveTrainer:
                                            label        = 'Start/ stop training\n(space  bar)',
                                            on_clicked   = lambda event: self._anim.play())
     
+        self._fig.canvas.mpl_connect('key_press_event', self._on_key_press)
         self._plot_target_samples()
         self._ax.legend()
     
@@ -351,7 +354,7 @@ class InteractiveTrainer:
         self._data_loader.reset()
         self._plot_target_samples()
 
-    def on_key_press(self, event: KeyEvent) -> None:
+    def _on_key_press(self, event: KeyEvent) -> None:
         """
         Starts and stops the animated learning if the space bar has been pressed.
         """

@@ -60,6 +60,4 @@ def run_parametric_regression() -> None:
                                  fig=fig,
                                  ax=ax_func)
 
-    fig.canvas.mpl_connect('key_press_event', trainer.on_key_press)
-
     plt.show()

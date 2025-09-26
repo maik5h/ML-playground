@@ -17,6 +17,7 @@ from .features import GaussFeature
 
 # Kernels to be used in Gaussian process regression.
 from .kernels import Kernel
+from .kernels import KernelInterface
 from .kernels import RBFKernel
 from .kernels import PolynomialKernel
 from .kernels import KernelProduct

@@ -94,8 +94,8 @@ class RBFKernel(Kernel, KernelInterface):
         in_scale:   min=0.05,   max=1,  step=0.05
         out_scale:  min=0.05,   max=1,  step=0.05
         """
-        in_lims = (0.05, 1, 0.05)
-        out_lims = (0.05, 1, 0.05)
+        in_lims = (0.05, 2, 0.05)
+        out_lims = (0.05, 2, 0.05)
         return [in_lims, out_lims]
 
 
@@ -129,7 +129,7 @@ class PolynomialKernel(Kernel, KernelInterface):
         The kernel function is given as
         `(a.T * b + offset)^power`.
         """
-        return (a[:, None] * b + self._offset) ** self._power
+        return 0.5 * (a[:, None] * b + self._offset) ** self._power
 
     @property
     def parameters(self) -> list[float]:
@@ -158,7 +158,7 @@ class PolynomialKernel(Kernel, KernelInterface):
         offset:   min=0,    max=1,  step=0.1
         """
         power_lims = (1, 4, 1)
-        offset_lims = (0, 1, 0.1)
+        offset_lims = (0.1, 1, 0.1)
         return [power_lims, offset_lims]
 
 
@@ -176,6 +176,9 @@ class KernelProduct(Kernel):
             out *= kernel(a, b)
 
         return out
+
+    def __len__(self) -> int:
+        return len(self._kernels)
 
     def add_kernel(self, kernel: Kernel) -> None:
         """Multiply a new kernel to the kernel product.
@@ -198,6 +201,9 @@ class KernelSum(Kernel):
             out += kernel(a, b)
 
         return out
+
+    def __len__(self) -> int:
+        return len(self._kernels)
 
     def add_kernel(self, kernel: Kernel) -> None:
         """Add a new kernel to the kernel sum.

@@ -43,6 +43,9 @@ class GPFunctionSpacePlot:
 
         mu = self._model.posterior.get_mean(x)
         sigma = self._model.posterior.get_sigma(x)
+        # Small values might end up negative due to machine precision.
+        # Enforce a small positive minimum.
+        sigma = np.where(sigma > 1e-5, sigma, 1e-5)
 
         densities = get_gaussian(y[:, None], mu, sigma)
         densities = np.flip(densities, axis=0)
@@ -87,7 +90,7 @@ class GPKernelPlot:
         # Plot kernel function in a range slightly larger than the
         # range in which samples are generated.
         self._xmax = Config.function_space_xlim[1] * 1.1
-        self._x = np.arange(-self._xmax, self._xmax, 0.05)
+        self._x = np.linspace(-self._xmax, self._xmax, Config.weight_space_samples)
         self.plot(initialize=True)
 
     def plot(self, initialize: bool = False) -> None:

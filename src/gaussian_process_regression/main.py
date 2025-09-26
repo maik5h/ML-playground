@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 
 from .model import ConditionalGaussianProcess
 from .model_gui import GPKernelPlot, GPFunctionSpacePlot, GPFunctionSamples
+from .gp_controls import GPController
 from ..math_utils import InteractiveTrainer
 from ..math_utils import FeatureSampleGenerator
 from ..config import Config, load_config
@@ -32,7 +33,15 @@ def run_gp_regression() -> None:
         xlim=[-4, 4],
         max_weight=8
     )
-    trainer = InteractiveTrainer((0.1, 0.85, 0.98, 0.95), model, data_gen, fig, ax_func)
+    trainer_x = ax_kernel.get_position().x0
+    trainer = InteractiveTrainer(
+        (trainer_x, 0.85, 0.98-trainer_x, 0.1),
+        model,
+        data_gen,
+        fig,
+        ax_func
+        )
+    controls = GPController((0.02, 0.02, 0.2, 0.96), model)
     model_gui = GPKernelPlot(ax_kernel, model)
     func_plot = GPFunctionSpacePlot(ax_func, model)
     samples = GPFunctionSamples(ax_func, model)

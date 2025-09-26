@@ -209,8 +209,8 @@ class InteractiveTrainer:
         ----------
 
         area: `tuple[float, float, float, float]`
-            Relative XYXY coordinates on the figure where the
-            InteractiveTrainer interface is displayed.
+            Relative [left, bottom, width, height] coordinates on the
+            figure where the InteractiveTrainer interface is displayed.
         model: `TrainableModel`
             The model that is being trained.
         data_generator: `Callable[[], tuple[NDArray, NDArray]]`
@@ -243,10 +243,7 @@ class InteractiveTrainer:
         # - Starting the animated training.
         #
         # The buttons make up the whole accessible area, each having 0.3 of the total width.
-        x = area[0]
-        y = area[1]
-        w = area[2] - area[0]
-        h = area[3] - area[1]
+        x, y, w, h = area
         self._sample_button = create_button(pos         = [x, y, 0.3*w, h],
                                             label       = 'Generate samples',
                                             on_clicked  = lambda event: self._generate_target_data())

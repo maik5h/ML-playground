@@ -315,13 +315,9 @@ class InteractiveTrainer:
         Updates the target samples plot.
         """
         x, y = self._data_loader.__next__()
-        noise_sigma = Config.target_noise_amount * np.eye(len(x))
-        # If only one datapoint is loaded, remove extra dimension created by np.eye().
-        if len(x) == 1:
-            noise_sigma = noise_sigma[0]
 
         # End the animation if the model requests so by returnin False.
-        if not self._model.condition(x, y, noise_sigma):
+        if not self._model.condition(x, y):
             self._anim.end()
 
         self._plot_target_samples()

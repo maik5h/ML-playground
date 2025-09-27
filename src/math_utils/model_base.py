@@ -11,12 +11,10 @@ class TrainableModel(metaclass=abc.ABCMeta):
     sampling.
     """
     @abc.abstractmethod
-    def condition(self, x: NDArray, y: NDArray, sigma: float) -> bool:
+    def condition(self, x: NDArray, y: NDArray) -> bool:
         """
         Updates the model to represent the posterior distribution after
-        observing values `y` at positions `x`. Sigma is the noise of
-        the target distribution.
-        Updates the plots associated with this model.
+        observing values `y` at positions `x`.
         Returns False to stop the training after this step, True else.
         """
         pass

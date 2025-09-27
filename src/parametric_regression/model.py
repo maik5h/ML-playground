@@ -46,10 +46,22 @@ class ParametricGaussian(Gaussian, TrainableModel):
     Further adds methods to condition on data and update the
     distribution manually.
     """
-    def __init__(self, phi: FeatureVector):
+    def __init__(self, phi: FeatureVector, epsilon: float):
         """
         Initializes the Gaussian with mu = 0 and sigma = unit matching
         the dimension of the input feature vector.
+
+        Parameters
+        ----------
+
+        phi: `FeatureVector`
+            The feature vector which is multiplied with Gaussian
+            weights. One Gaussian random variable is created for each
+            entry. A minimum of two elements must be available.
+        epsilon: `float`
+            The variance of the noise expected in the training data.
+            High epsilons attenuate the effect each sample has on the
+            posterior.
         """
         if len(phi) < 2:
             raise ValueError('Feature vector must have at least two elements.')
@@ -59,6 +71,8 @@ class ParametricGaussian(Gaussian, TrainableModel):
         # model.
         self.phi: FeatureVector = phi
 
+        self._epsilon = epsilon
+
         # Plotting weight and function space distributions are handled
         # inside different classes.
         # The following functions are used to notify these classes
@@ -67,7 +81,7 @@ class ParametricGaussian(Gaussian, TrainableModel):
         self.notify_weight_gui: Callable[[StateInfo], None] = None
         self.notify_func_gui: Callable[[StateInfo], None] = None
 
-    def condition(self, x: NDArray, y: NDArray, sigma: NDArray) -> bool:
+    def condition(self, x: NDArray, y: NDArray) -> bool:
         """
         Updates this Gaussian to represent the conditional probability
         given a data `x`, `y` and the noise amount on the data `sigma`.
@@ -81,15 +95,16 @@ class ParametricGaussian(Gaussian, TrainableModel):
         # If the data Y conatins only one datum, use simplified form of
         # inference.
         if y.shape == (1,):
-            sigma_t = self.sigma @ phi / (phi.T @ self.sigma @ phi + sigma**2)
+            sigma_t = self.sigma @ phi / (phi.T @ self.sigma @ phi + self._epsilon)
             self.mu += (sigma_t * (y - phi.T @ self.mu)).squeeze()
             self.sigma -= sigma_t @ (phi.T @ self.sigma)
 
-        # If data has multiple points, use cholensky decomposition of the matrix
-        # A = phi.T @ self.sigma @ phi + sigma ** 2 and solve linear equation instead of
-        # explicitly calculating A^-1.
+        # If data has multiple points, use cholensky decomposition of
+        # the matrix A = phi.T @ self.sigma @ phi + sigma and solve
+        # linear equation instead of explicitly calculating A^-1.
         else:
-            fac = sc.linalg.cho_factor(phi.T @ self.sigma @ phi + sigma ** 2)
+            noise = self._epsilon * np.eye(len(x))
+            fac = sc.linalg.cho_factor(phi.T @ self.sigma @ phi + noise)
 
             self.mu += self.sigma @ phi @ sc.linalg.cho_solve(fac, (y - phi.T @ self.mu))
             self.sigma -= self.sigma @ phi @ sc.linalg.cho_solve(fac, phi.T @ self.sigma)

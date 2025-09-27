@@ -1,11 +1,11 @@
-from typing import Callable, Optional
+from typing import Callable
 
 import numpy as np
 from numpy.typing import NDArray
 from scipy.linalg import lu_factor, lu_solve
 
 from ..math_utils import GaussianProcess, TrainableModel, get_gaussian
-from ..math_utils import Kernel, RBFKernel, PolynomialKernel, KernelSum, KernelProduct
+from ..math_utils import Kernel, RBFKernel
 
 
 class ConditionalGaussianProcess(TrainableModel):
@@ -14,20 +14,29 @@ class ConditionalGaussianProcess(TrainableModel):
     The posterior Gaussian process is accessible through the
     `posterior` property.
     """
-    def __init__(self,
-                 prior_mean: Callable[[NDArray], NDArray] = lambda x: np.zeros_like(x),
-                 prior_kernel: Kernel = RBFKernel()):
+    def __init__(
+            self,
+            epsilon: float,
+            prior_mean: Callable[[NDArray], NDArray] = lambda x: np.zeros_like(x),
+            prior_kernel: Kernel = None,
+        ):
         """Parameters
         ----------
 
+        epsilon: `float`
+            The variance of the noise expected in the training data.
+            Higher epsilons attenuate the effect each sample has on the
+            posterior.
         prior_mean: `Callable[[NDArray], NDArray]
             Mean function of the prior Gaussian process. Defaults to 0.
-        prior_kernel: `Kernel` 
+        prior_kernel: `Kernel`
             Kernel function of the prior Gaussian process. Defaults to
             an RBF kernel.
         """
+        prior_kernel = prior_kernel or RBFKernel()
         self._prior_gp = GaussianProcess(prior_mean, prior_kernel)
         self._posterior_gp = GaussianProcess(self._mu, self._kernel)
+        self._epsilon = epsilon
         self._x_samples = np.array([])
         self._y_samples = np.array([])
 
@@ -85,31 +94,7 @@ class ConditionalGaussianProcess(TrainableModel):
             @ lu_solve(self._covariance_lu_factor, self._prior_gp._kernel(self._x_samples, b))
         )
 
-    def _get_max_training_steps(self) -> Optional[int]:
-        """Get the maximum number of training steps allowed by the kernel.
-
-        If the model is trained with a polynomial kernel, the number of
-        datapoints it is conditioned on is not allowed to exceed the
-        exponent of the kernel function. This method returns the
-        maximum number of datapoints or `None`, if there is no limit.
-        """
-        # TODO I do not like the fact i have to do this. There must be
-        # a cleaner way.
-
-        k = self._prior_gp._kernel
-        # Check if the kernel is a polynomial kernel.
-        if isinstance(k, PolynomialKernel):
-                return k._power + 1
-        # Check if the kernel is a KernelSum or KernelProduct and the
-        # sum/ product has only one polynomial kernel as a term.
-        elif isinstance(k, (KernelSum, KernelProduct)):
-            if len(k) == 1:
-                k = list(k._kernels)[0]
-                if isinstance(k, PolynomialKernel):
-                    return k._power + 1
-
-
-    def condition(self, x: NDArray, y: NDArray, _sigma: float) -> None:
+    def condition(self, x: NDArray, y: NDArray) -> None:
         """Condition the Gaussian process on data.
 
         If `x` or `y` is `None`, the posterior is recalculated on the
@@ -126,15 +111,16 @@ class ConditionalGaussianProcess(TrainableModel):
             self._x_samples = np.concatenate((self._x_samples, x))
             self._y_samples = np.concatenate((self._y_samples, y))
 
-        # LU factorization of the matrix k_XX + sigma.
+        # LU factorization of the matrix k_XX + epsilon.
         self._covariance_lu_factor = lu_factor(
             self._prior_gp._kernel(
                 self._x_samples,
                 self._x_samples
             )
+            + self._epsilon * np.eye(len(self._x_samples))
         )
 
-        # Representer weights (k_XX + sigma)^-1 @ (y - m_X).
+        # Representer weights (k_XX + epsilon)^-1 @ (y - m_X).
         self._representer_weights = lu_solve(
             self._covariance_lu_factor,
             self._y_samples - self._prior_gp.get_mean(self._x_samples)
@@ -142,12 +128,6 @@ class ConditionalGaussianProcess(TrainableModel):
 
         for func in self._observer_calls:
             func()
-
-        # Stop the training if the maximum allowed number of training
-        # steps has been reached.
-        lim = self._get_max_training_steps()
-        if lim is not None and len(self._x_samples) >= lim:
-            return False
 
         return True
 
@@ -177,14 +157,8 @@ class ConditionalGaussianProcess(TrainableModel):
         # If the model has been conditioned at least once, condition it
         # again on the same data.
         if len(self._x_samples) > 0:
-            # Truncate the data if the new kernel allows for less
-            # training steps than previously performed.
-            lim = self._get_max_training_steps()
-            if lim is not None and len(self._x_samples) > lim:
-                self._x_samples = self._x_samples[:lim]
-                self._y_samples = self._y_samples[:lim]
+            self.condition(None, None)
 
-            self.condition(None, None, None)
         # If the model has not been conditioned yet, just inform the
         # observer of the changes.
         else:

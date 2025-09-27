@@ -42,7 +42,7 @@ def run_parametric_regression() -> None:
     init_features = FeatureVector(
         [PolynomialFeature(power=0), PolynomialFeature(power=1)]
     )
-    model = ParametricGaussian(init_features)
+    model = ParametricGaussian(init_features, Config.model_noise_amount)
 
     # Create graphic representation of the model.
     weight_space_UI = WeightSpaceGUI(model, fig, ax_weight)

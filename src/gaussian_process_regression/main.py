@@ -9,7 +9,6 @@ from ..config import Config, load_config
 
 
 def run_gp_regression() -> None:
-    load_config()
     plt.rcParams['font.size'] = 5
 
     # Initialize and customize matplotlib figure.
@@ -26,7 +25,7 @@ def run_gp_regression() -> None:
     ax_controls.axis('off')
 
     # Model, trainer and model visuals.
-    model = ConditionalGaussianProcess()
+    model = ConditionalGaussianProcess(epsilon=Config.model_noise_amount)
     data_gen = FeatureSampleGenerator(
         n_samples=10,
         noise_amount=0.3,

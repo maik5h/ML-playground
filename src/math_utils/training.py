@@ -10,7 +10,7 @@ from matplotlib.backend_bases import KeyEvent
 
 from ..math_utils import TrainableModel
 from ..config import Config
-from ..gui_utils import create_button
+from ..gui_utils import create_button, add_frame
 
 
 # Tuple and type of all sampling orders that can be used for data
@@ -259,6 +259,8 @@ class InteractiveTrainer:
         self._fig.canvas.mpl_connect('key_press_event', self._on_key_press)
         self._plot_target_samples()
         self._ax.legend()
+
+        add_frame(area)
     
     def _generate_target_data(self) -> None:
         """

@@ -6,6 +6,7 @@ from matplotlib.widgets import Button, Slider
 
 from ..math_utils import KernelInterface, RBFKernel, PolynomialKernel, KernelSum, KernelProduct
 from .model import ConditionalGaussianProcess
+from ..gui_utils import add_frame
 
 
 # Button colors. Colors for inactive Buttons are matplotlib default
@@ -292,6 +293,9 @@ class GPController:
         self._add = True
         self._model._prior_gp._kernel = self._kernel_sum
 
+        # Draw a frame around all elements.
+        add_frame(self._pos)
+
     def _get_layout(self, row: int) -> tuple[float, float, float, float]:
         """Return the coordinates of a kernel controller at `row`.
 
@@ -304,11 +308,9 @@ class GPController:
 
         Coordinates in [left, bottom, width, height].
         """
+        # There is space for six rows of elements along y.
         x, y, w, h = self._pos
-        if row == 0:
-            return (x, y+0.8*h, w, 0.1*h)
-        else:
-            return (x, y+0.8*h - 0.15*h*row, w, 0.1*h)
+        return (x, y+0.9*h - 0.166*h*row, w, 0.1*h)
 
     def _switch_mode(self, sum_button: bool) -> None:
         """Switch between adding and multiplying kernels.

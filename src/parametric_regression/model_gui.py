@@ -96,24 +96,33 @@ class WeightSpaceGUI:
         # of the lower axis y-position has been chosen.
         x_button_width = (pos.x1 - pos.x0) / 2
         x_button_height = 0.25 * x_button_width
-        x_button_ax = plt.axes(((pos.x0 + pos.x1 - x_button_width) / 2,
-                                pos.y0 * 0.1,
-                                x_button_width,
-                                x_button_height))
+        x_button_ax = plt.axes(
+            ((pos.x0 + pos.x1 - x_button_width) / 2,
+            pos.y0 * 0.1,
+            x_button_width,
+            x_button_height)
+            )
         self._weight_x_button = Button(x_button_ax, '')
-        self._weight_x_button.on_clicked(lambda event: self._cycle_displayed_weight('x'))
+        self._weight_x_button.on_clicked(
+            lambda event: self._cycle_displayed_weight('x')
+        )
 
         # Coordinates are relative, so width and height have to be
         # scaled with the figures aspect ratio.
-        aspect = 1 / 2
-        y_button_x_offset = (pos.x1 - pos.x0) * 0.2
-        y_button_ax = plt.axes((pos.x0 - y_button_x_offset,
-                                (pos.y0 + pos.y1 - x_button_width / aspect) / 2,
-                                x_button_height * aspect,
-                                x_button_width / aspect))
+        figsize = plt.gcf().get_size_inches()
+        aspect = figsize[1] / figsize[0]
+        y_button_x_offset = (pos.x1 - pos.x0) * 0.18
+        y_button_ax = plt.axes(
+            (pos.x0 - y_button_x_offset,
+            (pos.y0 + pos.y1 - x_button_width / aspect) / 2,
+            x_button_height * aspect,
+            x_button_width / aspect)
+        )
         self._weight_y_button = Button(y_button_ax, '')
         self._weight_y_button.label.set_rotation(90)
-        self._weight_y_button.on_clicked(lambda event: self._cycle_displayed_weight('y'))
+        self._weight_y_button.on_clicked(
+            lambda event: self._cycle_displayed_weight('y')
+        )
 
         self._update_label_text()
 

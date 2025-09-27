@@ -70,18 +70,20 @@ class ParametricGaussian(Gaussian, TrainableModel):
     def condition(self, x: NDArray, y: NDArray, sigma: NDArray) -> bool:
         """
         Updates this Gaussian to represent the conditional probability
-        given a linear transformation phi, data Y and the noise amount
-        on the data sigma.
+        given a data `x`, `y` and the noise amount on the data `sigma`.
         """
-        # TODO the data noise sigma is required here. I dont like that as in reality the noise might be unknown.
-        # Is there a way to avoid it?
+        # TODO the data noise sigma is required here. I dont like that
+        # as in reality the noise might be unknown. Is there a way to
+        # avoid it?
 
         phi = self.phi(x).T
 
-        # If the data Y conatins only one datum, use simplified form of inference.
+        # If the data Y conatins only one datum, use simplified form of
+        # inference.
         if y.shape == (1,):
-            self.mu += ((self.sigma @ phi / (phi.T @ self.sigma @ phi + sigma ** 2)) * (y - phi.T @ self.mu)).squeeze()
-            self.sigma -= (self.sigma @ phi / (phi.T @ self.sigma @ phi + sigma ** 2)) @ (phi.T @ self.sigma)
+            sigma_t = self.sigma @ phi / (phi.T @ self.sigma @ phi + sigma**2)
+            self.mu += (sigma_t * (y - phi.T @ self.mu)).squeeze()
+            self.sigma -= sigma_t @ (phi.T @ self.sigma)
 
         # If data has multiple points, use cholensky decomposition of the matrix
         # A = phi.T @ self.sigma @ phi + sigma ** 2 and solve linear equation instead of
@@ -91,7 +93,7 @@ class ParametricGaussian(Gaussian, TrainableModel):
 
             self.mu += self.sigma @ phi @ sc.linalg.cho_solve(fac, (y - phi.T @ self.mu))
             self.sigma -= self.sigma @ phi @ sc.linalg.cho_solve(fac, phi.T @ self.sigma)
-        
+
         self._notify_gui(StateInfo(update_plot=True))
 
         return True
@@ -111,7 +113,8 @@ class ParametricGaussian(Gaussian, TrainableModel):
         # Add dimension to parent Gaussian.
         self.add_random_variable()
 
-        # Add the feature to phi and update the array of features evaluated at x-values.
+        # Add the feature to phi and update the array of features
+        # evaluated at x-values.
         self.phi.add_feature(feature)
 
         self._notify_gui(StateInfo(update_plot=True))

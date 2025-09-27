@@ -1,55 +1,31 @@
-from typing import Union, Literal, Optional, Sequence
+from typing import Union, Literal, Optional
 
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
 from matplotlib.widgets import Button, Slider
 
 from .model import ParametricGaussian
 from ..math_utils import Feature, PolynomialFeature, HarmonicFeature, GaussFeature
-from ..gui_utils import create_button
+from ..gui_utils import create_button, add_frame
 
 
 # The maximum number of features that the FeatureVector class can hold.
 MAX_NUMBER_FEATURES = 7
 
-# The distance relative to the full figure in which buttons are spaced in y-direction.
-Y_SPACING = 0.09
 
-def pos(element: Literal['button', 'controller'], row: int) -> tuple[float, float, float, float]:
+def hide_widget(
+        widget: Union[Button, Slider],
+        callback_id: Optional[int] = None
+    ) -> None:
     """
-    Returns the position of an element as a list in XYWH notation.
-    Elements are arranged in rows, spaced by Y_SPACING. Buttons are positioned above
-    Controllers, it is assumed that a total of three buttons is placed on top,
-    consequently the Controller rows are shifted by 3.
+    Hides the given widget and disconnects callbacks.
 
-    Attributes
-    ----------
-
-    element: `Literal['button', 'controller']`
-        The type of element. Buttons are on top, controllers below.
-    row: `int`
-        The desired row index of the element.
-    """
-    x = 0.02
-    y = 0.85
-    w = 0.2
-    h = 0.08
-
-    row_offset = 3 if element == 'controller' else 0
-
-    return (x, y - (row + row_offset) * Y_SPACING, w, h)
-
-
-def hide_widget(widget: Union[Button, Slider], callback_id: Optional[int] = None) -> None:
-    """
-    Hides the given widget and takes care that no inputs are accepted while it is hidden.
-
-    Attributes
+    Parameters
     ----------
     widget: `Union[Button, Slider]`
         The widget to be hidden, can be a Button or a Slider.
     callback_id: `Optional[int]`
-        id of the function connected to this instance. Can be None if no function has been connected.
+        id of the function connected to this instance. Can be None if
+        no function has been connected.
     """
     if callback_id is not None:
         widget.disconnect(callback_id)
@@ -61,30 +37,41 @@ def hide_widget(widget: Union[Button, Slider], callback_id: Optional[int] = None
 
 class FeatureController:
     """
-    FeatureController is a collection of elements that enable editing of a single Feature object.
-    It consists of a label displaying the function definition of the feature ("$\phi_i(x)=...$"),
-    a slider to set the function parameter of the feature and a button to disable the feature.
+    FeatureController is a collection of elements that enable editing
+    of a single Feature object. It consists of a label displaying the
+    function definition of the feature ("$\phi_i(x)=...$"), a slider to
+    set the function parameter of the feature and a button to disable
+    the feature.
     """
-    def __init__(self, parent_controller, position: Sequence[float], idx: int):
+    def __init__(
+            self,
+            parent_controller,
+            position: tuple[float, float, float, float],
+            idx: int
+        ):
         """
         Parameters
         ----------
         parent_controller: `FeatureVectorController`
-            The parent FeatureVectorController instance that is holding this FeatureController.
+            The parent FeatureVectorController instance that is holding
+            this FeatureController.
         position: `Sequence[float]`
-            Position of this FeatureController relative to the full figure in XYWH notation.
+            Position of this FeatureController relative to the full
+            figure in [left, bottom, width, height] notation.
         idx: `int`
-            Index of this FeatureController in the list of existing feature controllers.
+            Index of this FeatureController in the list of existing
+            feature controllers.
         """
         self._idx = idx
         self._parent_controller = parent_controller
 
-        # Stores a reference to the corresponding Feature. Is set once this FeatureController is
-        # activated through self.set_feature().
+        # Stores a reference to the corresponding Feature. Is set once
+        # this FeatureController is activated through
+        # self.set_feature().
         self._feature: Feature = None
 
-        # Initialize required axes with arbitrary values and set correct values via
-        # self.set_position later.
+        # Initialize required axes with arbitrary values and set
+        # correct values via self.set_position later.
         ax_label = plt.axes([0, 0, 1, 1])
         self._ax_slider_a = plt.axes([0, 0, 1, 1])
         self._ax_slider_b = plt.axes([0, 0, 1, 1])
@@ -92,19 +79,20 @@ class FeatureController:
 
         ax_label.axis('off')
 
-        # Initialize label and Buttons. Label text can be changed during runtime, Button does not have to be
-        # changed at all.
+        # Initialize label and Buttons.
         self._label = ax_label.text(0, 0, '', verticalalignment='top')
         self._x_button = Button(self._ax_button, 'X', color='#DF908F', hovercolor='#F5BDBC')
 
-        # Do not initialize sliders, as they are specific to the feature that is displayed and can not be
-        # edited during runtime. They are initialized in self.set_feature(...).
+        # Do not initialize sliders, as they are specific to the
+        # feature that is displayed and can not be edited during
+        # runtime. They are initialized in self.set_feature(...).
         self._slider_a: Slider = None
         self._slider_b: Slider = None
 
         self.set_position(position)
 
-        # Callback ids of the methods connected to slider and button. Necessary to disconnect them on self.hide().
+        # Callback ids of the methods connected to slider and button.
+        # Necessary to disconnect them on self.hide().
         self._slider_id: int = None
         self._button_id: int = None
 
@@ -114,15 +102,16 @@ class FeatureController:
         self._ax_slider_b.set_visible(False)
         hide_widget(self._x_button, self._button_id)
     
-    def set_position(self, new_position: Sequence[float]) -> None:
+    def set_position(
+            self,
+            new_position: tuple[float, float, float, float]
+        ) -> None:
         """
-        Sets this FeatureController to the given new position by updating the axes of all members
-        to fit into the new position.
+        Sets this FeatureController to the given new position by
+        updating the axes of all members to fit into the new position.
         """
-        x = new_position[0]
-        y = new_position[1]
-        width = new_position[2]
-        height = new_position[3]
+        #
+        x, y, width, height = new_position
 
         self._label.axes.set_position([x, y + height, 0.6*width, 0.3*height])
         self._ax_slider_a.set_position([x, y + 0.35*height, 0.8*width, 0.3*height])
@@ -139,8 +128,8 @@ class FeatureController:
 
     def hide(self) -> None:
         """
-        Hides and disables this FeatureController. Disconnects the callback function of slider
-        and x_button.
+        Hides and disables this FeatureController. Disconnects the
+        callback function of slider and x_button.
         """
         self._label.axes.set_visible(False)
         hide_widget(self._slider_a, self._slider_id)
@@ -152,9 +141,10 @@ class FeatureController:
 
     def set_feature(self, feature: Feature) -> None:
         """
-        Sets up label, slider and X-button to accomodate the given Feature.
-        This also "activates" the FeatureController, turning it visible and connecting
-        the callback functions regarding this feature.
+        Sets up label, slider and X-button to accomodate the given
+        Feature. This also "activates" the FeatureController, turning
+        it visible and connecting the callback functions regarding
+        this feature.
         """
         self._feature = feature
 
@@ -165,14 +155,22 @@ class FeatureController:
 
         self._label.set_text(f'$\phi_{self._idx+1}(x) = {feature.get_expression()}$')
 
-        # Setting a feature creates new Slider objects. This requires clearing the axes or else remainders
-        # of the previous Sliders might be displayed.
+        # Setting a feature creates new Slider objects. This requires
+        # clearing the axes or else remainders of the previous Sliders
+        # might be displayed.
         self._refresh_axes()
 
         limits = feature.get_parameter_limits()
         min, max, step = limits[0]
-        self._slider_a = Slider(self._ax_slider_a, '', valmin=min, valmax=max,
-                                valinit=feature.parameters[0], valstep=step, handle_style={'size': 5})
+        self._slider_a = Slider(
+            ax=self._ax_slider_a,
+            label='',
+            valmin=min,
+            valmax=max,
+            valinit=feature.parameters[0],
+            valstep=step,
+            handle_style={'size': 5}
+        )
         self._slider_a.valtext.set_visible(False)
         self._slider_a_id = self._slider_a.on_changed(self._on_slider_a_changed)
         self._slider_a.set_val(feature.parameters[0])
@@ -180,28 +178,38 @@ class FeatureController:
 
         if len(limits) > 1:
             min, max, step = limits[1]
-            self._slider_b = Slider(self._ax_slider_b, '', valmin=min, valmax=max,
-                                    valinit=feature.parameters[1], valstep=step, handle_style={'size': 5})
+            self._slider_b = Slider(
+                ax=self._ax_slider_b,
+                label='',
+                valmin=min,
+                valmax=max,
+                valinit=feature.parameters[1],
+                valstep=step,
+                handle_style={'size': 5}
+            )
             self._slider_b.valtext.set_visible(False)
             self._slider_b_id = self._slider_b.on_changed(self._on_slider_b_changed)
             self._slider_b.set_val(feature.parameters[1])
             self._ax_slider_b.set_visible(True)
-        
-        self._button_id = self._x_button.on_clicked(lambda event: self._parent_controller.remove_feature(self._idx))
-    
+
+        self._button_id = self._x_button.on_clicked(
+            lambda event: self._parent_controller.remove_feature(self._idx)
+        )
+
     def _refresh_axes(self) -> None:
         """
-        Removes the Slider axes and replaces them with new axes at the same position. Call to clear all
-        children to prevent leftover markers being displayed after creating new Sliders.
+        Removes the Slider axes and replaces them with new axes at the
+        same position. Call to clear all children to prevent leftover
+        markers being displayed after creating new Sliders.
         """
         pos = self._ax_slider_a.get_position().get_points()
-        pos = (pos[0, 0], pos[0, 1], pos[1, 0] - pos[0, 0], pos[1, 1] - pos[0, 1])
+        pos = (pos[0, 0], pos[0, 1], pos[1, 0]-pos[0, 0], pos[1, 1]-pos[0, 1])
         self._ax_slider_a.remove()
         self._ax_slider_a = plt.axes(pos)
         self._ax_slider_a.set_visible(False)
 
         pos = self._ax_slider_b.get_position().get_points()
-        pos = (pos[0, 0], pos[0, 1], pos[1, 0] - pos[0, 0], pos[1, 1] - pos[0, 1])
+        pos = (pos[0, 0], pos[0, 1], pos[1, 0]-pos[0, 0], pos[1, 1]-pos[0, 1])
         self._ax_slider_b.remove()
         self._ax_slider_b = plt.axes(pos)
         self._ax_slider_b.set_visible(False)
@@ -220,50 +228,97 @@ class FeatureController:
 class FeatureVectorController:
     """
     Controlls the feature vector of a given ParametricGaussian.
-    Draws buttons that let the user dynamically add new features, and a FeatureController instance
-    for every active feature to a figure.
+    Draws buttons that let the user dynamically add new features, and a
+    FeatureController instance for every active feature to a figure.
     """
-    def __init__(self, fig: Figure, gaussian: ParametricGaussian):
-        # Reference to target figure and ParametricGaussian object.
-        self.fig = fig
+    def __init__(
+            self,
+            area: tuple[float, float, float, float],
+            gaussian: ParametricGaussian
+        ):
+        self._area = area
         self.gauss = gaussian
 
         self._number_active_features = 0
 
+        # Create three buttons that add a polynomial, sine or cosine
+        # feature respectively when clicked.
         self._control_buttons: list[Button] = []
-        self._create_control_buttons()
+        create_button(
+            pos=self._get_layout('button', row=0),
+            label='Add power feature',
+            on_clicked=lambda event: self.add_feature(PolynomialFeature(0)),
+            target_list=self._control_buttons
+        )
+        create_button(
+            pos=self._get_layout('button', row=1),
+            label='Add harmonic feature',
+            on_clicked=lambda event: self.add_feature(HarmonicFeature(1, 0)),
+            target_list=self._control_buttons
+        )
+        create_button(
+            pos=self._get_layout('button', row=2),
+            label='Add Gauss feature',
+            on_clicked=lambda event: self.add_feature(GaussFeature(0.2, 0)),
+            target_list=self._control_buttons
+        )
 
+        # Create the list of feature controllers. Acts as a basic
+        # object pool.
         self._feature_controllers: list[FeatureController] = []
         for i in range(MAX_NUMBER_FEATURES):
-            self._feature_controllers.append(FeatureController(self, pos('controller', row=i), idx=i))
+            controller = FeatureController(
+                self,
+                self._get_layout('controller', row=i),
+                idx=i
+            )
+            self._feature_controllers.append(controller)
 
         # Show the features that are already present in the gaussians phi attribute.
         for feature in self.gauss.phi.features:
             self._feature_controllers[self._number_active_features].set_feature(feature)
             self._number_active_features += 1
 
-    def _create_control_buttons(self) -> None:
-        """
-        Creates three buttons that add a polynomial, sine or cosine feature respectively when clicked.
-        """
-        create_button(pos           = pos('button', row=0),
-                      label         = 'Add power feature',
-                      on_clicked    = lambda event: self.add_feature(PolynomialFeature(0)),
-                      target_list   = self._control_buttons)
-        
-        create_button(pos           = pos('button', row=1),
-                      label         = 'Add harmonic feature',
-                      on_clicked    = lambda event: self.add_feature(HarmonicFeature(1, 0)),
-                      target_list   = self._control_buttons)
+        add_frame(area)
 
-        create_button(pos           = pos('button', row=2),
-                      label         = 'Add Gauss feature',
-                      on_clicked    = lambda event: self.add_feature(GaussFeature(0.2, 0)),
-                      target_list   = self._control_buttons)
+    def _get_layout(
+            self,
+            element: Literal['button', 'controller'],
+            row: int
+        ) -> tuple[float, float, float, float]:
+        """
+        Returns the position of an element as a list in XYWH notation.
+        Elements are arranged in rows, spaced by Y_SPACING. Buttons are
+        positioned above Controllers, it is assumed that a total of
+        three buttons is placed on top.
+
+        Parameters
+        ----------
+
+        element: `Literal['button', 'controller']`
+            The type of element. Buttons are on top, controllers below.
+        row: `int`
+            The desired row index of the element.
+        """
+        x = self._area[0]
+        y = self._area[1] + self._area[3]
+        w = self._area[2]
+        h = self._area[3]
+
+        # There is space for 10 buttons/ FeatureControllers along y.
+        # They are each 0.02*height apart.
+        spacing = 0.02 * h
+        element_height = (h - 9 * spacing) / 10
+
+        # Controllers are positioned below three rows of buttons.
+        row = row + 3 if element == 'controller' else row
+        height_offset = (row + 1) * element_height + row * spacing
+        return (x, y - height_offset, w, element_height)
                 
     def add_feature(self, feature: Feature) -> None:
         """
-        Adds a feature to the gaussians phi attribute and displays the FeatureController to control it.
+        Adds a feature to the gaussians phi attribute and displays the
+        FeatureController to control it.
         """
         if self._number_active_features == MAX_NUMBER_FEATURES: return
  
@@ -274,28 +329,35 @@ class FeatureVectorController:
 
     def remove_feature(self, idx: int) -> None:
         """
-        Removes the feature at index idx from the gaussians phi attribute and hides and disconnects
-        the FeatureController associated with it.
+        Removes the feature at index idx from the gaussians phi
+        attribute and hides and disconnects the FeatureController
+        associated with it.
         """
-        # The ParametricGaussian class requires at least two active features.
+        # The ParametricGaussian class requires at least two active
+        # features.
         if self._number_active_features == 2: return
 
-        self._feature_controllers[idx].hide()
+        fcs = self._feature_controllers
+        fcs[idx].hide()
 
-        # Move elements that were positioned below the removed index upwards to close the gap.
-        # The element that has just been hidden can be moved to position self.number_active_features-1.
-        self._feature_controllers[idx].set_idx(self._number_active_features-1)
-        self._feature_controllers[idx].set_position(pos('controller', row=self._number_active_features-1))
+        # Move elements that were positioned below the removed index
+        # upwards to close the gap. The element that has just been
+        # hidden can be moved to position
+        # self.number_active_features-1.
+        fcs[idx].set_idx(self._number_active_features-1)
+        fcs[idx].set_position(
+            self._get_layout('controller', row=self._number_active_features-1)
+        )
 
         for i in range(idx+1, self._number_active_features):
             # Move elements one row upwards on the GUI.
-            self._feature_controllers[i].set_position(pos('controller', row=i-1))
-            self._feature_controllers[i].set_idx(i-1)
+            fcs[i].set_position(self._get_layout('controller', row=i-1))
+            fcs[i].set_idx(i-1)
 
             # Swap elements in list.
-            self._feature_controllers[i-1], self._feature_controllers[i] = self._feature_controllers[i], self._feature_controllers[i-1]
+            fcs[i-1], fcs[i] = fcs[i], fcs[i-1]
 
         self._number_active_features -= 1
-        self.fig.canvas.draw()
+        plt.gcf().canvas.draw()
         self.gauss.remove_feature(idx)
         

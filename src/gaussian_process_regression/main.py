@@ -41,7 +41,7 @@ def run_gp_regression() -> None:
         fig,
         ax_func
         )
-    controls = GPController((0.02, 0.02, 0.2, 0.96), model)
+    controls = GPController((0.02, 0.05, 0.2, 0.9), model)
     model_gui = GPKernelPlot(ax_kernel, model)
     func_plot = GPFunctionSpacePlot(ax_func, model)
     samples = GPFunctionSamples(ax_func, model)

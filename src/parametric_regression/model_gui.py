@@ -20,7 +20,6 @@ import numpy as np
 from scipy.stats import multivariate_normal
 
 from .model import ParametricGaussian, StateInfo
-from ..config import Config
 
 
 class WeightSpaceGUI:
@@ -31,9 +30,37 @@ class WeightSpaceGUI:
     Two of the Gaussian random variables are displayed on a given axis
     and can be edited through different user inputs.
     """
-    def __init__(self, model: ParametricGaussian, fig: Figure, ax: Axes):
+    def __init__(
+            self,
+            model: ParametricGaussian,
+            fig: Figure,
+            ax: Axes,
+            vmax: float,
+            resolution: int,
+            mouse_wheel_sensitivity: float
+        ):
+        """Parameters
+        ----------
+
+        model: `ParametricGaussian`
+            The model to visualize.
+        fig: `matplotlib Figure`
+            The figure of the interactive plot.
+        ax: `matplotlib Axes`
+            The axes to draw the weight space distribution on.
+        vmax: `float`
+            vmax of the density plot.
+        resolution: `int`
+            Number of pixels along the x- and y-axis at which the
+            distribution is sampled.
+        mouse_wheel_sensitivity: `float`
+            Factor multiplied to changes induced by scrolling.
+        """
         self._model = model
         self._ax = ax
+        self._vmax = vmax
+        self._resolution = resolution
+        self._mouse_wheel_sensitivity = mouse_wheel_sensitivity
 
         # Connect the update method of this instance to the model to
         # register this instance as an 'observer'.
@@ -58,8 +85,8 @@ class WeightSpaceGUI:
         # As imshow is used instead of contourf() or similar, the
         # y-axis has to be mirrored by convention.
         self.x1, self.x2 = np.meshgrid(
-            np.linspace(xlim[0], xlim[1], Config.weight_space_samples),
-            np.linspace(ylim[1], ylim[0], Config.weight_space_samples)
+            np.linspace(xlim[0], xlim[1], self._resolution),
+            np.linspace(ylim[1], ylim[0], self._resolution)
         )
         self._weight_samples = np.dstack((self.x1, self.x2))
         self._plot_lims = (xlim[0], xlim[1], ylim[0], ylim[1])
@@ -157,7 +184,7 @@ class WeightSpaceGUI:
             plot_kwargs = {'cmap': 'Blues',
                            'aspect': 'auto',
                            'extent': self._plot_lims,
-                           'vmax': Config.colormap_vmax}
+                           'vmax': self._vmax}
             
             self._ax_img = self._ax.imshow(weight_density, **plot_kwargs)
             self._ax.set_title('Weight space')
@@ -299,7 +326,7 @@ class WeightSpaceGUI:
         """
         # If `r` is pressed, rotate regardless of other key states.
         if self._key_pressed['r']:
-            angle = 0.1 * Config.mouse_wheel_sensitivity
+            angle = 0.1 * self._mouse_wheel_sensitivity
             angle = angle if event.button == 'up' else -angle
 
             # Snap angle to some integer fraction of pi, so the initial
@@ -311,9 +338,9 @@ class WeightSpaceGUI:
 
         else:
             if event.button == 'up':
-                factor = 1 - 0.3 * Config.mouse_wheel_sensitivity
+                factor = 1 - 0.3 * self._mouse_wheel_sensitivity
             elif event.button == 'down':
-                factor = 1 / (1 - 0.3 * Config.mouse_wheel_sensitivity)
+                factor = 1 / (1 - 0.3 * self._mouse_wheel_sensitivity)
 
             # Scale only the selected indices. Further do only scale in
             # x- or y-direction if one of the x or y keys is pressed.
@@ -329,17 +356,25 @@ class WeightSpaceGUI:
 
 
 class FunctionSpacePlot:
-    def __init__(self, model: ParametricGaussian, ax: Axes):
+    def __init__(
+            self,
+            model: ParametricGaussian,
+            ax: Axes,
+            vmax: float,
+            resolution: int
+        ):
         self._model = model
         self._model.notify_func_gui = self.update
         self._ax = ax
+        self._vmax = vmax
+        self._resolution = resolution
         self._active_idx = [0, 1]
 
         # Prepare a grid to evaluate the function space density at.
         xlim = ax.set_xlim()
         ylim = ax.set_ylim()
-        self._x = np.linspace(xlim[0], xlim[1], Config.function_space_samples)
-        self._y = np.linspace(ylim[1], ylim[0], Config.function_space_samples)
+        self._x = np.linspace(xlim[0], xlim[1], self._resolution)
+        self._y = np.linspace(ylim[1], ylim[0], self._resolution)
         self._plot_lims = (xlim[0], xlim[1], ylim[0], ylim[1])
 
         self._plot(initialize=True)
@@ -373,7 +408,7 @@ class FunctionSpacePlot:
             plot_kwargs = {'cmap': 'Blues',
                            'aspect': 'auto',
                            'extent': self._plot_lims,
-                           'vmax': Config.colormap_vmax}
+                           'vmax': self._vmax}
 
             self._ax_img = self._ax.imshow(density, **plot_kwargs)
         else:

@@ -4,7 +4,6 @@ from matplotlib.axes import Axes
 from matplotlib.backend_bases import MouseEvent, MouseButton
 
 from .model import ConditionalGaussianProcess
-from ..config import Config
 from ..math_utils import get_gaussian
 
 
@@ -24,9 +23,21 @@ class GPFunctionSpacePlot:
     blue. The mean and the 2-std limits are displayed as solid/ dashed
     blue lines.
     """
-    def __init__(self, ax: Axes, model: ConditionalGaussianProcess):
+    def __init__(
+            self,
+            ax: Axes,
+            model: ConditionalGaussianProcess,
+            resolution: int,
+            vmax: float
+        ):
         self._ax = ax
         self._model = model
+        self._vmax = vmax
+
+        xlim = self._ax.set_xlim()
+        ylim = self._ax.set_ylim()
+        self._x = np.linspace(xlim[0], xlim[1], resolution)
+        self._y = np.linspace(ylim[0], ylim[1], resolution)
 
         self._ax.set_title('Function distribution')
 
@@ -35,22 +46,19 @@ class GPFunctionSpacePlot:
         self.plot(initialize=True)
 
     def plot(self, initialize: bool = False) -> None:
-        xlim = self._ax.set_xlim()
-        ylim = self._ax.set_ylim()
-
-        x = np.linspace(xlim[0], xlim[1], Config.function_space_samples)
-        y = np.linspace(ylim[0], ylim[1], Config.function_space_samples)
-
-        mu = self._model.posterior.get_mean(x)
-        sigma = self._model.posterior.get_sigma(x)
+        mu = self._model.posterior.get_mean(self._x)
+        sigma = self._model.posterior.get_sigma(self._x)
         # Small values might end up negative due to machine precision.
         # Enforce a small positive minimum.
         sigma = np.where(sigma > 1e-5, sigma, 1e-5)
 
-        densities = get_gaussian(y[:, None], mu, sigma)
+        densities = get_gaussian(self._y[:, None], mu, sigma)
         densities = np.flip(densities, axis=0)
 
         if initialize:
+            xlim = self._ax.set_xlim()
+            ylim = self._ax.set_ylim()
+
             self._ax.set_xlabel('x')
             self._ax.set_ylabel('f(x)')
             self._plot = self._ax.imshow(
@@ -58,11 +66,11 @@ class GPFunctionSpacePlot:
                 cmap='Blues',
                 aspect='auto',
                 extent=(xlim[0], xlim[1], ylim[0], ylim[1]),
-                vmax=Config.colormap_vmax
+                vmax=self._vmax
             )
-            self._mean_lines = self._ax.plot(x, mu, color='tab:blue', linewidth=0.5)
-            self._cov_lines_1 = self._ax.plot(x, mu + 2*np.sqrt(sigma), **PLOT_KWARGS)
-            self._cov_lines_2 = self._ax.plot(x, mu - 2*np.sqrt(sigma), **PLOT_KWARGS)
+            self._mean_lines = self._ax.plot(self._x, mu, color='tab:blue', linewidth=0.5)
+            self._cov_lines_1 = self._ax.plot(self._x, mu + 2*np.sqrt(sigma), **PLOT_KWARGS)
+            self._cov_lines_2 = self._ax.plot(self._x, mu - 2*np.sqrt(sigma), **PLOT_KWARGS)
 
         else:
             for line in self._mean_lines:
@@ -72,9 +80,9 @@ class GPFunctionSpacePlot:
             for line in self._cov_lines_2:
                 line.remove()
             self._plot.set_data(densities)
-            self._mean_lines = self._ax.plot(x, mu, color='tab:blue', linewidth=0.5)
-            self._cov_lines_1 = self._ax.plot(x, mu + 2*np.sqrt(sigma), **PLOT_KWARGS)
-            self._cov_lines_2 = self._ax.plot(x, mu - 2*np.sqrt(sigma), **PLOT_KWARGS)
+            self._mean_lines = self._ax.plot(self._x, mu, color='tab:blue', linewidth=0.5)
+            self._cov_lines_1 = self._ax.plot(self._x, mu + 2*np.sqrt(sigma), **PLOT_KWARGS)
+            self._cov_lines_2 = self._ax.plot(self._x, mu - 2*np.sqrt(sigma), **PLOT_KWARGS)
 
         self._plot.figure.canvas.draw_idle()
 
@@ -82,15 +90,22 @@ class GPFunctionSpacePlot:
 class GPKernelPlot:
     """Plots the kernel function of a Gaussian process.
     """
-    def __init__(self, ax: Axes, model: ConditionalGaussianProcess):
+    def __init__(
+            self,
+            ax: Axes,
+            model: ConditionalGaussianProcess,
+            resolution: int,
+            vmax: float
+        ):
         self._ax = ax
         self._model = model
+        self._vmax = vmax
         self._model.add_observer_call(self.plot)
+        self._xlim = self._ax.set_xlim()
 
         # Plot kernel function in a range slightly larger than the
         # range in which samples are generated.
-        self._xmax = Config.function_space_xlim[1] * 1.1
-        self._x = np.linspace(-self._xmax, self._xmax, Config.weight_space_samples)
+        self._x = np.linspace(self._xlim[0], self._xlim[1], resolution)
         self.plot(initialize=True)
 
     def plot(self, initialize: bool = False) -> None:
@@ -98,9 +113,12 @@ class GPKernelPlot:
         kernel_func = np.flip(kernel_func, axis=0)
 
         if initialize:
-            self._ax_img = self._ax.imshow(kernel_func,
-                                           extent=[-self._xmax, self._xmax, -self._xmax, self._xmax],
-                                           cmap='Blues')
+            self._ax_img = self._ax.imshow(
+                kernel_func,
+                extent=[self._xlim[0], self._xlim[1], self._xlim[0], self._xlim[1]],
+                cmap='Blues',
+                vmax=self._vmax
+            )
             self._ax.set_title(r'posterior kernel $k_{ab}$')
             self._ax.set_xlabel('a')
             self._ax.set_ylabel('b')
@@ -117,7 +135,8 @@ class GPFunctionSamples:
             self,
             ax: Axes,
             model: ConditionalGaussianProcess,
-            number_samples: int = 1):
+            number_samples: int,
+        ):
         """Parameters
         ----------
 
@@ -137,10 +156,8 @@ class GPFunctionSamples:
 
         self._gen = np.random.Generator(np.random.PCG64(seed=5))
 
-        self._xmax = Config.function_space_xlim[1] * 1.1
-        self._x = np.linspace(-self._xmax, self._xmax, 300)
-        self._ax.set_xlim(Config.function_space_xlim)
-        self._ax.set_ylim(Config.function_space_ylim)
+        xlim = self._ax.set_xlim()
+        self._x = np.linspace(xlim[0], xlim[1], 300)
 
         # Plot lines are stored here, so they can be removed
         # and replaced for each plot() call.

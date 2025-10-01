@@ -4,10 +4,11 @@ from .model import ParametricGaussian
 from .model_gui import WeightSpaceGUI, FunctionSpacePlot
 from ..math_utils import FeatureVector
 from ..math_utils import PolynomialFeature
-from ..config import Config
 from .feature_controls import FeatureVectorController
 from ..math_utils import InteractiveTrainer
 from ..math_utils import FeatureSampleGenerator
+from ..config import ParametricRegressionConfig as Config
+from ..config import load_parametric_regression_config
 
 
 def run_parametric_regression() -> None:
@@ -18,6 +19,8 @@ def run_parametric_regression() -> None:
     the learning process.
     """
     plt.rcParams['font.size'] = 5
+
+    load_parametric_regression_config()
 
     # Set up plots for weight and function space.
     # Set ip three axes:
@@ -45,8 +48,20 @@ def run_parametric_regression() -> None:
     model = ParametricGaussian(init_features, Config.model_noise_amount)
 
     # Create graphic representation of the model.
-    weight_space_UI = WeightSpaceGUI(model, fig, ax_weight)
-    function_space_plot = FunctionSpacePlot(model, ax_func)
+    weight_space_UI = WeightSpaceGUI(
+        model=model,
+        fig=fig,
+        ax=ax_weight,
+        vmax=Config.colormap_vmax,
+        resolution=Config.weight_space_resolution,
+        mouse_wheel_sensitivity=Config.mouse_wheel_sensitivity
+    )
+    function_space_plot = FunctionSpacePlot(
+        model=model,
+        ax=ax_func,
+        vmax=Config.colormap_vmax,
+        resolution=Config.function_space_resolution
+    )
 
     # Create interface to build the feature function.
     feature_controller = FeatureVectorController(
@@ -70,7 +85,9 @@ def run_parametric_regression() -> None:
         model=model,
         data_generator=data_gen,
         fig=fig,
-        ax=ax_func
+        ax=ax_func,
+        timestep=Config.time_per_learning_step,
+        batch_size=Config.samples_per_learning_step
     )
 
     plt.show()

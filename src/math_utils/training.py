@@ -9,7 +9,6 @@ from matplotlib.collections import PathCollection
 from matplotlib.backend_bases import KeyEvent
 
 from ..math_utils import TrainableModel
-from ..config import Config
 from ..gui_utils import create_button, add_frame
 
 
@@ -198,12 +197,16 @@ class InteractiveTrainer:
     procedure of a model, including the generation of target data,
     sampling and updating the model.
     """
-    def __init__(self,
-                 area: tuple[float, float, float, float],
-                 model: TrainableModel,
-                 data_generator: Callable[[], tuple[NDArray, NDArray]],
-                 fig: Figure,
-                 ax: Axes):
+    def __init__(
+            self,
+            area: tuple[float, float, float, float],
+            model: TrainableModel,
+            data_generator: Callable[[], tuple[NDArray, NDArray]],
+            fig: Figure,
+            ax: Axes,
+            timestep: int,
+            batch_size: int
+        ):
         """
         Parameters
         ----------
@@ -219,12 +222,24 @@ class InteractiveTrainer:
             The figure to add the interface to.
         ax: `Axes`
             The axes to plot the target samples to.
+        timestep: `int`
+            The amount of time in milliseconds between two training
+            steps.
+        batch_size: `int`
+            Number of samples to load per training step.
         """
         self._model: TrainableModel = model
         self._data_generator = data_generator
-        self._data_loader: DataLoader = DataLoader([], [], self._model, 'sequential')
+        self._data_loader: DataLoader = DataLoader(
+            x_data=[],
+            y_data=[],
+            model=self._model,
+            order='sequential',
+            batch_size=batch_size
+        )
         self._fig = fig
         self._ax = ax
+        self._timestep = timestep
 
         # References to the collections returned by the two scatter plots showing the datapoints that have been
         # used in training and the remaining ones. Must be removed before plotting again.
@@ -332,11 +347,13 @@ class InteractiveTrainer:
         self._model.restart_training()
         self._data_loader.reset()
         data = self._data_loader
-        animation = FuncAnimation(self._fig, self._training_step,
-                                    init_func=lambda : self._training_step(0),
-                                    frames=np.arange(len(data)),
-                                    interval=Config.time_per_learning_step,
-                                    repeat=False)
+        animation = FuncAnimation(
+            self._fig, self._training_step,
+            init_func=lambda : self._training_step(0),
+            frames=np.arange(len(data)),
+            interval=self._timestep,
+            repeat=False
+        )
         self._ax.figure.canvas.draw()
 
         return animation

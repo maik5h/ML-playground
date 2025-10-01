@@ -1,6 +1,5 @@
-# TODO this will be extended by other classes concerning future interactive plots
+from .parametric_regression_config import ParametricRegressionConfig
+from .parametric_regression_config import load_parametric_regression_config
 
-from .config import Config, load_config
-
-# Load the config file as soon as this module is loaded.
-load_config()
+from .gp_regression_config import GPRegressionConfig
+from .gp_regression_config import load_gp_regression_config

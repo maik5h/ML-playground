@@ -48,9 +48,6 @@ class GPFunctionSpacePlot:
     def plot(self, initialize: bool = False) -> None:
         mu = self._model.posterior.get_mean(self._x)
         sigma = self._model.posterior.get_sigma(self._x)
-        # Small values might end up negative due to machine precision.
-        # Enforce a small positive minimum.
-        sigma = np.where(sigma > 1e-5, sigma, 1e-5)
 
         densities = get_gaussian(self._y[:, None], mu, sigma)
         densities = np.flip(densities, axis=0)

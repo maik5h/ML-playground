@@ -135,6 +135,14 @@ There are two RBF kernels available, so you comapre how adding and multiplying t
 $f_{poly}(x, x') = (x \cdot x' + c)^n$\
 This kernel has an constant offset $c$ and a power $n$ as parameters. The functions returned by this process are polynomials of degree $n$. It can for example be used to model long term trends in the data and be added to an RBF kernel which models short term fluctuations.
 
+<u>Wiener process kernel</u>\
+$f_{wp}(x, x') = \min(x - x_0, x' - x_0)$\
+This kernel defines a GP with a starting point $x_0$. Below this point the process is set to zero, above this point the variance increases linearly with $x$. Realizations of this GP are random walks.
+
+<u>Integrated Wiener process kernel</u>\
+$f_{cs}(x, x') = \min(x-x_0, x'-x_0)^3 / 3 + |x - x'| \cdot \min(x-x_0, x'-x_0)^2 / 2$\
+GPs with this kernel are integrals over Wiener processes.
+
 ### Observe kernel function, mean function and GP samples
 
 On the right-hand side of the panel are two plots: the kernel function on the left, the distribution over function values on the right. The right plot also contains multiple lines: a solid blue line shows the mean function of the GP distribution, two dashed blue lines indicate the mean $\pm$ two standard deviations. The purple line shows a random sample from the GP. It can be resampled by left-clicking on the plot. See how changing the input scale of an RBF kernel does not change the overall distribution of samples, but heavily affects how individual samples look.

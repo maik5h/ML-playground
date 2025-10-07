@@ -17,6 +17,7 @@ class KernelInterface(metaclass=abc.ABCMeta):
     """Abstract base class to store and access additional parameters
     of kernel functions.
     """
+
     @property
     @abc.abstractmethod
     def parameters(self) -> list[Union[int, float]]:
@@ -160,6 +161,133 @@ class PolynomialKernel(Kernel, KernelInterface):
         power_lims = (1, 4, 1)
         offset_lims = (0.1, 1, 0.1)
         return [power_lims, offset_lims]
+
+
+class WienerProcessKernel(Kernel):
+    def __init__(self, x0: float, out_scale: float):
+        """Create a Wiener process kernel with `x0` and `out_scale`.
+
+        Parameters
+        ----------
+        x0: `float`
+            The 'start' of the process. This kernel is only defined
+            for x-values larger `x0`.
+        out_scale: `float`
+            Factor multiplied to the kernel output.
+        """
+        self._x0 = x0
+        self._out_scale = out_scale
+
+    def __call__(self, a: NDArray, b: NDArray) -> NDArray:
+        """Returns the kernel function evaluated at (a, b).
+
+        The kernel function is given as
+        `k(a, b) = min(a, b)`.
+        """
+        a_matrix = np.repeat((a - self._x0)[:, None], repeats=len(b), axis=1)
+        b_matrix = np.repeat((b - self._x0)[None, :], repeats=len(a), axis=0)
+
+        # The kernel function is not defined for values < x0.
+        # For x < x0, leave a small variance so the probability density
+        # does not diverge.
+        a_matrix = np.where(a_matrix < 1e-6, 1e-6, a_matrix)
+        b_matrix = np.where(b_matrix < 1e-6, 1e-6, b_matrix)
+
+        min = np.where(a_matrix < b_matrix, a_matrix, b_matrix)
+
+        return self._out_scale * min
+
+    @property
+    def parameters(self) -> list[float]:
+        return [self._x0, self._out_scale]
+
+    def set_parameter(self, idx: int, value: float) -> None:
+        """Sets:
+        - idx == 0: x0
+        - idx == 1: out scale
+        """
+        if idx == 0:
+            self._x0 = value
+        elif idx == 1:
+            self._out_scale = value
+        else:
+            raise ValueError(f'Tried to set parameter number {idx}, while only two are available.')
+
+    @staticmethod
+    def get_parameter_limits() -> list[tuple[float, float, float]]:
+        """Returns the minimum value, maximum value and intended step
+        size for `x0` and `out_scale`:
+
+        x0:         min=-6,     max=6,  step=0.1
+        out_scale:  min=0.1,    max=2,  step=0.1
+        """
+        x0_lims = (-6, 6, 0.1)
+        out_lims = (0.01, 2, 0.01)
+        return [x0_lims, out_lims]
+
+
+class IntegratedWienerProcessKernel(Kernel):
+    def __init__(self, x0: float, out_scale: float):
+        """Create a kernel with `x0` and `out_scale`, which defines
+        integrated Wiener processes.
+
+        Parameters
+        ----------
+        x0: `float`
+            The 'start' of the process. This kernel is only defined
+            for x-values larger `x0`.
+        out_scale: `float`
+            Factor multiplied to the kernel output.
+        """
+        self._x0 = x0
+        self._out_scale = out_scale
+
+    def __call__(self, a: NDArray, b: NDArray) -> NDArray:
+        """Returns the kernel function evaluated at (a, b).
+
+        The kernel function is given as
+        `k(a, b) = min(a, b)^3 / 3 + |a - b| * min(a, b)^2 / 2`.
+        """
+        a_matrix = np.repeat((a - self._x0)[:, None], repeats=len(b), axis=1)
+        b_matrix = np.repeat((b - self._x0)[None, :], repeats=len(a), axis=0)
+
+        # The kernel function is not defined for values < x0.
+        # For x < x0, leave a small variance so the probability density
+        # does not diverge.
+        a_matrix = np.where(a_matrix < 1e-6, 1e-6, a_matrix)
+        b_matrix = np.where(b_matrix < 1e-6, 1e-6, b_matrix)
+
+        min = np.where(a_matrix < b_matrix, a_matrix, b_matrix)
+        min = (min ** 3) / 3 + (np.abs(a_matrix - b_matrix) * min ** 2) / 2
+        return self._out_scale * min
+
+    @property
+    def parameters(self) -> list[float]:
+        return [self._x0, self._out_scale]
+
+    def set_parameter(self, idx: int, value: float) -> None:
+        """Sets:
+        - idx == 0: x0
+        - idx == 1: out scale
+        """
+        if idx == 0:
+            self._x0 = value
+        elif idx == 1:
+            self._out_scale = value
+        else:
+            raise ValueError(f'Tried to set parameter number {idx}, while only two are available.')
+
+    @staticmethod
+    def get_parameter_limits() -> list[tuple[float, float, float]]:
+        """Returns the minimum value, maximum value and intended step
+        size for `x0` and `out_scale`:
+
+        x0:         min=-6,     max=6,  step=0.1
+        out_scale:  min=0.1,    max=2,  step=0.1
+        """
+        x0_lims = (-6, 6, 0.1)
+        out_lims = (0.01, 2, 0.01)
+        return [x0_lims, out_lims]
 
 
 class KernelProduct(Kernel):

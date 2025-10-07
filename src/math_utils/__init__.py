@@ -20,6 +20,8 @@ from .kernels import Kernel
 from .kernels import KernelInterface
 from .kernels import RBFKernel
 from .kernels import PolynomialKernel
+from .kernels import WienerProcessKernel
+from .kernels import IntegratedWienerProcessKernel
 from .kernels import KernelProduct
 from .kernels import KernelSum
 

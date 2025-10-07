@@ -4,7 +4,15 @@ import matplotlib.pyplot as plt
 from matplotlib.backend_bases import Event
 from matplotlib.widgets import Button, Slider
 
-from ..math_utils import KernelInterface, RBFKernel, PolynomialKernel, KernelSum, KernelProduct
+from ..math_utils import (
+    KernelInterface,
+    RBFKernel,
+    PolynomialKernel,
+    WienerProcessKernel,
+    IntegratedWienerProcessKernel,
+    KernelSum,
+    KernelProduct,
+)
 from .model import ConditionalGaussianProcess
 from ..gui_utils import add_frame
 
@@ -278,6 +286,22 @@ class GPController:
                 self._kernel_sum,
                 title='Polynomial kernel',
                 slider_labels=['power', 'offset']
+            ),
+            KernelController(
+                self._get_layout(row=4),
+                WienerProcessKernel(0, 1),
+                self._kernel_product,
+                self._kernel_sum,
+                title='Wiener process kernel',
+                slider_labels=['x0', 'output scale']
+            ),
+            KernelController(
+                self._get_layout(row=5),
+                IntegratedWienerProcessKernel(0, 1),
+                self._kernel_product,
+                self._kernel_sum,
+                title='Int. Wiener p. kernel',
+                slider_labels=['x0', 'output scale']
             )
         ]
 
